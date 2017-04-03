@@ -1,0 +1,8 @@
+[Core]
+Name = csv_collect_and_publish
+Module = csv_collect_and_publish
+
+[Documentation]
+Author = fdgdg
+Version = 0.1
+Description = Write cvs data and publish

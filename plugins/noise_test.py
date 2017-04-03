@@ -37,4 +37,4 @@ class PluginNoiseTest(plugintypes.IPluginExtended):
 	def show_help(self):
 		print "Optional argument: polling_interval -- in seconds, default: 10. \n \
 		Returns the power of the system noise.\n \
-		NOTE: The reference and channel should have the same input signal."
+		NOTE: The reference and channel should have the same input_signal signal."
