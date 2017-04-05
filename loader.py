@@ -1,4 +1,3 @@
-import argparse
 import os
 
 import matplotlib
@@ -17,7 +16,7 @@ import numpy
 import json
 from PIL import Image
 
-from processor import Clip
+from preprocessing.processor import Clip
 
 
 class DataLoader:

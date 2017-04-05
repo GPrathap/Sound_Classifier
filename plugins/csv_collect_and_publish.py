@@ -2,6 +2,7 @@ import Queue
 import csv
 import json
 import socket
+import threading
 import timeit
 import datetime
 
@@ -13,8 +14,8 @@ import plugin_interface as plugintypes
 
 
 class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
-    def __init__(self, file_name="collect.csv", ip='0.0.0.0', port=8888, secondary_port=8899, test=True,
-                 receiver_port=4096, delim=",", verbose=False, train=True, number_of_channels =8, buffer_size=1024):
+    def __init__(self, file_name="collect.csv", ip='0.0.0.0', port=8888, secondary_port=8889, test=True,
+                 receiver_port=4096, delim=",", verbose=False, train=True, number_of_channels =5, buffer_size=64):
         now = datetime.datetime.now()
         self.time_stamp = '%d-%d-%d_%d-%d-%d' % (now.year, now.month, now.day, now.hour,
                                                  now.minute, now.second)
@@ -26,13 +27,15 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
         self.test = test
         self.ip = ip
         self.port = port
+        self.lock = threading.Lock()
         self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.queue = Queue.Queue(5)
         self.number_of_channels = number_of_channels
-        self.buffer_size = buffer_size*4
+        self.buffer_size = buffer_size*1
         self.ring_buffers = [RingBuffer(self.buffer_size) for i in range(0, self.number_of_channels)]
+        self.hh = 1
         self.noisereducer_thread = NoiseReducer("main thread", self.buffer_size,
-                                                self.ring_buffers,number_of_channels, self.server, self.ip, self.port+1)
+                                              self.ring_buffers,number_of_channels, self.server, self.ip, self.port+1, self.lock, self.verbose)
         if self.train:
             self.secondary_ip = ip
             self.secondary_port = secondary_port
@@ -125,11 +128,13 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
             row += str(i)
             row += self.delim
             index_buffer+=1
-
         if self.train:
             for i in kinect_angles:
                 row += str(i)
                 row += self.delim
+                if self.verbose:
+                    print (kinect_angles)
+                self.hh+=1
         row[-1].replace(",", "")
         row += '\n'
         with open(self.file_name, 'a') as f:
@@ -137,7 +142,9 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
 
         if not self.noisereducer_thread.is_processing:
              self.noisereducer_thread = NoiseReducer("main thread", self.buffer_size, self.ring_buffers,
-                                                self.number_of_channels, self.server, self.ip, self.port+1)
+                                                self.number_of_channels, self.server, self.ip, self.port+5, self.lock, self.verbose)
              self.noisereducer_thread.start()
+             self.noisereducer_thread.join()
+
 
 

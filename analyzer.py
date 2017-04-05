@@ -1,15 +1,13 @@
-from random import randint
-
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-import pandas as pd
-import processor as api
 import numpy as np
-
+import pandas as pd
 import seaborn as sb
 
 from loader import DataLoader
+from preprocessing import processor as api
+
 
 def add_subplot_axes(ax, position):
     box = ax.get_position()
