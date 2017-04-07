@@ -55,4 +55,4 @@ d()
 # librosa.display.specshow(D, y_axis='linear')
 # plt.colorbar(format='%+2.0f dB')
 # plt.title('Linear-frequency power spectrogram')
-# print "---------------"
+print "---------------"

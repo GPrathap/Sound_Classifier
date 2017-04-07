@@ -28,8 +28,8 @@ class PreProcessor(threading.Thread):
     def ssa_processor(self, thread_id):
         noise_signal = self.input_buffer[thread_id]
         reconstructed_signal = SingularSpectrumAnalysis(noise_signal, self.window_size).execute()
-        # clip = Clip(buffer=reconstructed_signal, is_raw_data=False)
-        # reconstructed_signal = clip.get_feature_vector()
+        clip = Clip(buffer=reconstructed_signal, is_raw_data=False)
+        reconstructed_signal = clip.get_feature_vector()
         self.lock.acquire()
         self.output_buffer[thread_id] = reconstructed_signal
         self.lock.release()
