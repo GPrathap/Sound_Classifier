@@ -2,10 +2,11 @@ import os
 
 import matplotlib
 
-from utils import data_types
+from utils import data_types_utils
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.interactive(False)
 import numpy as np
 import tensorflow as tf
 import time
@@ -126,10 +127,10 @@ class DataLoader:
         np.reshape(image, (-1, image.shape[1] * image.shape[0]))
         feature_vector = image.tostring()
         clip_raw = tf.train.Example(features=tf.train.Features(feature={
-            'clip_height': data_types._int64_feature(image.shape[1]),
-            'clip_width': data_types._int64_feature(image.shape[0]),
-            'clip_raw': data_types._bytes_feature(feature_vector),
-            'clip_label_raw': data_types._bytes_feature(clip_label)}))
+            'clip_height': data_types_utils._int64_feature(image.shape[1]),
+            'clip_width': data_types_utils._int64_feature(image.shape[0]),
+            'clip_raw': data_types_utils._bytes_feature(feature_vector),
+            'clip_label_raw': data_types_utils._bytes_feature(clip_label)}))
         return clip_raw
 
     def get_label(self, class_number):
