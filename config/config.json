@@ -1,5 +1,4 @@
 {
-  "project_path":"/home/runge/openbci/OpenBCI_Python",
   "file_name":"collect.csv",
   "train_dir":"/build/dataset",
   "ip":"0.0.0.0",
@@ -9,13 +8,18 @@
   "receiver_port":4096,
   "verbose":"False",
   "train":"True",
-  "number_of_channels":5,
-  "buffer_size":64,
-  "buffer_capacity":2,
-  "feature_vector_size":32,
-  "window_size":64,
+  "buffer_capacity":1000,
+  "feature_vector_size":512,
+  "window_size":1024,
+  "overlap_size":512,
   "model":{
     "number_of_class":200,
     "tfrecords_filename": "/build/tfrecords_train/clips_segmentation.tfrecords"
-  }
+  },
+  "sampling_rate":250,
+  "low_frequency":50,
+  "high_frequency":1,
+  "order":2,
+  "number_of_channels":5,
+  "channel_vector":[1,2, 3, 4, 5]
 }

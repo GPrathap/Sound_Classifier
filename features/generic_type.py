@@ -5,7 +5,7 @@ from utils import feature_extractor as utils
 
 
 class EMG:
-    def __init__(self, audio, dependencies=None, number_of_bins=1024, frame=2048, sampling_rate=44000,
+    def __init__(self, audio, dependencies=None, number_of_bins=64, frame=128, sampling_rate=250,
                  is_raw_data=True):
         self.audio = audio
         self.dependencies = dependencies
@@ -272,7 +272,7 @@ class EMG:
         for k in range(0, self.frames):
             current_frame = self.get_current_frame(k)
             N = len(current_frame)
-            Em = self.get_embed_seq(current_frame, 1, M)
+            Em = self.get_embed_seq()
             A = np.tile(Em, (len(Em), 1, 1))
             B = np.transpose(A, [1, 0, 2])
             D = np.abs(A - B)  # D[i,j,k] = |Em[i][k] - Em[j][k]|

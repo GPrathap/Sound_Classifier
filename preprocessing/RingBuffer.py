@@ -66,10 +66,12 @@ class RingBuffer(Sequence):
         res = self._arr[self._right_index % self._capacity]
         return res
 
-    def pop_window(self, window_size):
+    def pop_window(self, window_size, overlap):
         dataset = []
         for i in range(0, window_size):
             dataset.append(self.pop())
+        self._right_index = self._right_index + overlap
+        self._fix_indices()
         return dataset
 
     # implement Sequence methods

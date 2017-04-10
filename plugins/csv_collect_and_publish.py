@@ -4,6 +4,11 @@ import threading
 import timeit
 import datetime
 import tensorflow as tf
+from scipy.signal import butter, filtfilt
+import numpy as np
+import matplotlib.pyplot as plt
+
+import pandas as pd
 
 from preprocessing.RingBuffer import RingBuffer
 from preprocessing.noise_reducer import NoiseReducer
@@ -13,12 +18,10 @@ import plugin_interface as plugintypes
 
 
 class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
-
     def init_plugin(self):
         config_file = self.project_file_path + "/config/config.json"
         with open(config_file) as config:
             self.plugin_config = json.load(config)
-            self.project_file_path = str(self.plugin_config["project_path"])
             self.now = datetime.datetime.now()
             self.time_stamp = '%d-%d-%d_%d-%d-%d' % (self.now.year, self.now.month, self.now.day, self.now.hour,
                                                      self.now.minute, self.now.second)
@@ -37,20 +40,26 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
             self.kinect_angles = RingBuffer(20, dtype=list)
             self.number_of_channels = int(self.plugin_config["number_of_channels"])
             self.buffer_capacity = int(self.plugin_config["buffer_capacity"])
-            self.buffer_size = int(self.plugin_config["buffer_size"])
+            self.buffer_size = int(self.plugin_config["window_size"])
             self.ring_buffers = [RingBuffer(self.buffer_size * self.buffer_capacity)
                                  for i in range(0, self.number_of_channels)]
             self.tfrecords_filename = self.project_file_path + str(self.plugin_config["model"]["tfrecords_filename"])
             self.writer = tf.python_io.TFRecordWriter(self.tfrecords_filename)
-            self.noisereducer_thread = NoiseReducer("main thread",self.ring_buffers, self.server, self.lock,
-                                                    self.writer,self.plugin_config)
+            self.noisereducer_thread = NoiseReducer("main thread", self.ring_buffers, self.server,
+                                                    self.writer, self.plugin_config)
+            self.channel_vector = list(self.plugin_config["channel_vector"])
+            self.sampling_rate = int(self.plugin_config["sampling_rate"])
+            self.sampling_time = 1.0 / self.sampling_rate * 1.0
+
             if self.train:
                 self.secondary_ip = self.ip
                 self.secondary_port = int(self.plugin_config["secondary_port"])
                 self.receiver_port = int(self.plugin_config["receiver_port"])
                 self.secondary_server = UDPServer("udp_server", self.kinect_angles, self.secondary_port
                                                   , self.receiver_port, ip=self.secondary_ip)
+
     def activate(self):
+        self.project_file_path = "/home/runge/openbci/git/OpenBCI_Python"
         print ("stated initializing plugin...")
         self.init_plugin()
         if self.train:
@@ -62,9 +71,6 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
             except:
                 print ("Error while starting udp server...")
                 self.secondary_server.socket.close()
-                # Open in append mode
-                # with open(self.train_file, 'a') as f:
-                #     f.write('%' + self.time_stamp + '\n')
         print ("plugin initialization is completed successfully.")
 
     def deactivate(self):
@@ -81,6 +87,9 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
 
     def send_row_data(self, data):
         self.server.sendto(data, (self.ip, self.port))
+
+    # def generate_raw_data(self):
+
 
     def get_updated_values(self):
         return self.secondary_server.get_next_point()
@@ -123,11 +132,8 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
             f.write(row)
 
         if not self.noisereducer_thread.is_processing:
-            self.noisereducer_thread = NoiseReducer("main thread", self.ring_buffers, self.server, self.lock, self.writer, self.plugin_config)
+            self.noisereducer_thread = NoiseReducer("main thread", self.ring_buffers, self.server,
+                                                    self.writer, self.plugin_config)
             self.noisereducer_thread.start()
             self.noisereducer_thread.join()
 
-
-# project_dir = "/home/runge/openbci/OpenBCI_Python"
-# plugin = PluginCSVCollectAndPublish()
-# plugin.activate()

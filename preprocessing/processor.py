@@ -3,6 +3,7 @@ import os
 import seaborn as sb
 
 from features.fft import FFT
+from features.generic_type import EMG
 from features.mean import Mean
 from features.mfcc import MFCC
 from features.zcr import ZCR
@@ -17,11 +18,10 @@ random.seed(20150420)
 
 class Clip:
 
-    RATE = 44100  # All recordings in ESC are 44.1 kHz
-    FRAME = 248  # Frame size in samples
-
-    def __init__(self, buffer=None, filename=None, file_type=None, is_raw_data=True, number_of_bins=0):
+    def __init__(self, buffer=None, filename=None, file_type=None, is_raw_data=True, number_of_bins=0, frame=128, sampling_rate=250):
         self.is_raw_data = is_raw_data
+        self.frame = frame
+        self.sampling_rate = sampling_rate
         if self.is_raw_data:
             self.filename = os.path.basename(filename)
             self.path = os.path.abspath(filename)
@@ -36,20 +36,27 @@ class Clip:
 
         with self.audio as audio:
             self.featureManager = FeatureManager()
-            # self.featureManager.addRegisteredFeatures(MFCC(self.audio,None, 32, self.FRAME, self.RATE), "mfcc")
-            self.featureManager.addRegisteredFeatures(FFT(self.audio,None,self.number_of_bins, self.FRAME, self.RATE, is_raw_data=self.is_raw_data), "fft")
-            # TODO recheck
-            # self.featureManager.addRegisteredFeatures(Energy(self.audio,None,self.FRAME, self.RATE), "energy")
-            # self.featureManager.addRegisteredFeatures(ZCR(self.audio,None,self.FRAME, self.RATE), "zcr")
-            # self.featureManager.addRegisteredFeatures(Mean(self.audio, None, self.FRAME, self.RATE), "mean")
+            self.featureManager.addRegisteredFeatures(FFT(self.audio,None,self.number_of_bins, self.frame,
+                                                          self.sampling_rate, is_raw_data=self.is_raw_data), "fft")
 
-            # self.featureManager.getRegisteredFeature("mfcc").compute_mfcc()
+            self.featureManager.addRegisteredFeatures(EMG(self.audio,None,number_of_bins =number_of_bins,
+                                                          frame=self.frame, sampling_rate=self.sampling_rate,
+                                                          is_raw_data=self.is_raw_data), "emg")
+
             self.featureManager.getRegisteredFeature("fft").compute_fft()
-            #TODO recheck
-            # self.featureManager.getRegisteredFeature("energy").compute_energy()
-            # self.featureManager.getRegisteredFeature("energy").compute_energy_entropy()
-            # self.featureManager.getRegisteredFeature("zcr").compute_zcr()
-            # self.featureManager.getRegisteredFeature("mean").compute_mean()
+            self.featureManager.getRegisteredFeature("emg").compute_hurst()
+            # self.featureManager.getRegisteredFeature("emg").compute_embed_seq(Tau, D)
+            # self.featureManager.getRegisteredFeature("emg").compute_bin_power(Band)
+            # self.featureManager.getRegisteredFeature("emg").compute_pfd(D)
+            # self.featureManager.getRegisteredFeature("emg").compute_hfd(Kmax)
+            # self.featureManager.getRegisteredFeature("emg").compute_hjorth(D)
+            # self.featureManager.getRegisteredFeature("emg").compute_spectral_entropy()
+            # self.featureManager.getRegisteredFeature("emg").compute_svd_entropy(W)
+            # self.featureManager.getRegisteredFeature("emg").compute_ap_entropy(M, R)
+            # self.featureManager.getRegisteredFeature("emg").compute_samp_entropy(M, R)
+            # self.featureManager.getRegisteredFeature("emg").compute_dfa(Ave, L)
+            # self.featureManager.getRegisteredFeature("emg").compute_permutation_entropy()
+            # self.featureManager.getRegisteredFeature("emg").compute_LLE(t)
 
             self.feature_list = self.featureManager.getRegisteredFeatures()
 
@@ -57,6 +64,7 @@ class Clip:
         return '<{0}/{1}>'.format(self.category, self.filename)
 
     def get_feature_vector(self):
+        self.featureManager.getRegisteredFeature("emg").get_hurst()
         return self.featureManager.getRegisteredFeature("fft").get_logamplitude()
 
 
