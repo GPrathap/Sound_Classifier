@@ -1,8 +1,8 @@
 import threading
 
-from csv_collect_and_publish import PluginCSVCollectAndPublish
 import pandas as pd
 
+from plugins.csv_collect_and_publish import PluginCSVCollectAndPublish
 from preprocessing.noise_reducer import NoiseReducer
 
 
