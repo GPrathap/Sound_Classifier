@@ -6,7 +6,10 @@ import pandas as pd
 from pandas import DataFrame, Series
 import numpy as np
 import neo
-
+import mne
+from mne import io, read_proj, read_selection
+from mne.datasets import sample
+from mne.time_frequency import psd_multitaper
 import mne
 
 print(__doc__)
@@ -27,6 +30,12 @@ n_ch = len(channel_vector)
 df = pd.read_csv("/home/runge/openbci/application.linux64/application.linux64/OpenBCI-RAW-right_strait_up_new.txt")
 df = df[channel_vector].dropna(axis=0)
 
+# Set parameters
+data_path = sample.data_path()
+raw_fname = data_path + '/MEG/sample/sample_audvis_raw.fif'
+proj_fname = data_path + '/MEG/sample/sample_audvis_eog-proj.fif'
+
+
 for i in range(0,n_ch):
     data.append(df.ix[:,i])
     ch_types.append('mag')
@@ -35,8 +44,39 @@ for i in range(0,n_ch):
 info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
 raw = mne.io.RawArray(data, info)
 scalings = 'auto'
-raw.plot(n_channels=n_ch, scalings=scalings, title='MEG data visualization over time',
-         show=True, block=True)
+
+# Add SSP projection vectors to reduce EOG and ECG artifacts
+# projs = read_proj(proj_fname)
+# raw.add_proj(projs, remove_existing=True)
+
+# raw.plot(n_channels=n_ch, scalings=scalings, title='MEG data visualization over time', show=True, block=True)
+
+fmin, fmax = 2, 300
+tmin, tmax = 0, 130
+n_fft = 64
+
+# Let's first check out all channel types
+# raw.plot_psd(area_mode='range', tmax=10.0, show=False)
+
+picks = mne.pick_types(raw.info, meg='mag', eeg=False, eog=False,
+                       stim=False)
+picks = picks[:1]
+
+
+f, ax = plt.subplots()
+psds, freqs = psd_multitaper(raw, low_bias=True, tmin=tmin, tmax=tmax,
+                             fmin=fmin, fmax=fmax, proj=True, picks=picks,
+                             n_jobs=1)
+psds = 10 * np.log10(psds)
+psds_mean = psds.mean(0)
+psds_std = psds.std(0)
+
+ax.plot(freqs, psds_mean, color='k')
+ax.fill_between(freqs, psds_mean - psds_std, psds_mean + psds_std,
+                color='k', alpha=.5)
+ax.set(title='Multitaper PSD', xlabel='Frequency',
+       ylabel='Power Spectral Density (dB)')
+plt.show()
 
 # EpochsArray
 # event_id = 1

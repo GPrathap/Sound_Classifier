@@ -36,14 +36,14 @@ class UDPServer(threading.Thread):
         return self.previous_buffer
 
     def get_next_point(self):
-        self.lock.acquire()
-        if not self.buffer.empty():
-            data = self.buffer.pop_window(10)
-            self.lock.release()
-            return data
-        else:
-            self.lock.release()
-            return self.previous_buffer
+        # self.lock.acquire()
+        # if not self.buffer.empty():
+        #     data = self.buffer.pop_window(10)
+        #     self.lock.release()
+        #     return data
+        # else:
+        #     self.lock.release()
+        return self.previous_buffer
 
     def call_back_handler(self):
         while self.isRun:
@@ -53,6 +53,7 @@ class UDPServer(threading.Thread):
             # print >> sys.stderr, data
             if data:
                 self.lock.acquire()
+                # print (data)
                 self.buffer.append(data)
                 self.previous_buffer = data
                 self.lock.release()

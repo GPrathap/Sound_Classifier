@@ -5,30 +5,28 @@ from utils import feature_extractor as utils
 
 
 class EMG:
-    def __init__(self, audio, dependencies=None, number_of_bins=64, frame=128, sampling_rate=250,
-                 is_raw_data=True):
+    def __init__(self, audio, config):
         self.audio = audio
-        self.dependencies = dependencies
-        self.frame = frame
-        self.sampling_rate = sampling_rate
-        self.number_of_bins = number_of_bins
-        self.is_raw_data = is_raw_data
-        if self.is_raw_data:
-            self.frames = int(np.ceil(len(self.audio.data) / 1000.0 * self.sampling_rate / self.frame))
-        else:
-            self.frames = 1
+        self.dependencies = config["emg"]["dependencies"]
+        self.frame_size = int(config["frame_size"])
+        self.sampling_rate = int(config["sampling_rate"])
+        self.number_of_bins = int(config["emg"]["number_of_bins"])
+        self.is_raw_data = config["is_raw_data"]
+        self.time_lag = int(config["emg"]["time_lag"])
+        self.embedded_dimension = int(config["emg"]["embedded_dimension"])
+        self.boundary_frequencies = list(config["emg"]["boundary_frequencies"])
+        self.hfd_parameter = int(config["emg"]["hfd_parameter"])
+        self.r = int(config["emg"]["r"])
+        self.frames = int(np.ceil(len(self.audio.data) / self.frame_size))
 
     def __enter__(self):
-        print "Initializing emg calculation..."
+        print ("Initializing emg calculation...")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        print "Done with calculations..."
+        print ("Done with calculations...")
 
     def get_current_frame(self, index):
-        if self.is_raw_data:
-            return utils._get_frame(self.audio, index, self.frame)
-        else:
-            return self.audio.data
+            return utils._get_frame_array(self.audio, index, self.frame_size)
 
     def compute_hurst(self):
         self.hurst = []
@@ -51,55 +49,42 @@ class EMG:
             A = np.column_stack((n, np.ones(n.size)))
             [m, c] = np.linalg.lstsq(A, R_S)[0]
             self.hurst.append(m)
-
-        if self.is_raw_data:
-            self.hurst = np.asarray(self.hurst)
-        else:
-            self.hurst = np.asarray(self.hurst)[0]
+        self.hurst = np.asarray(self.hurst)
 
     def get_hurst(self):
         return self.hurst
 
-    def compute_embed_seq(self, Tau, D):
+    def compute_embed_seq(self):
         self.embed_seq = []
         for k in range(0, self.frames):
             current_frame = self.get_current_frame(k)
-            shape = (current_frame.size - Tau * (D - 1), D)
-            strides = (current_frame.itemsize, Tau * current_frame.itemsize)
+            shape = (current_frame.size - self.time_lag * (self.embedded_dimension - 1), self.embedded_dimension)
+            strides = (current_frame.itemsize, self.time_lag * current_frame.itemsize)
             m = np.lib.stride_tricks.as_strided(current_frame, shape=shape, strides=strides)
             self.embed_seq.append(m)
-
-        if self.is_raw_data:
-            self.embed_seq = np.asarray(self.embed_seq)
-        else:
-            self.embed_seq = np.asarray(self.embed_seq)[0]
+        self.embed_seq = np.asarray(self.embed_seq)
 
     def get_embed_seq(self):
         return self.embed_seq
 
-    def compute_bin_power(self, Band):
+    def compute_bin_power(self):
         self.Power_Ratio = []
         self.Power = []
         for k in range(0, self.frames):
             current_frame = self.get_current_frame(k)
             C = np.fft.fft(current_frame)
             C = abs(C)
-            Power = np.zeros(len(Band) - 1)
-            for Freq_Index in range(0, len(Band) - 1):
-                Freq = float(Band[Freq_Index])
-                Next_Freq = float(Band[Freq_Index + 1])
+            Power = np.zeros(len(self.boundary_frequencies) - 1)
+            for Freq_Index in range(0, len(self.boundary_frequencies) - 1):
+                Freq = float(self.boundary_frequencies[Freq_Index])
+                Next_Freq = float(self.boundary_frequencies[Freq_Index + 1])
                 Power[Freq_Index] = sum(
-                    C[np.floor(Freq / self.sampling_rate * len(current_frame)):
-                    np.floor(Next_Freq / self.sampling_rate * len(current_frame))])
+                    C[int(np.floor(Freq / self.sampling_rate * len(current_frame))):
+                    int(np.floor(Next_Freq / self.sampling_rate * len(current_frame)))])
             self.Power.append(Power)
             self.Power_Ratio.append(Power / sum(Power))
-
-        if self.is_raw_data:
-            self.Power = np.asarray(self.Power)
-            self.Power_Ratio = np.asarray(self.Power_Ratio)
-        else:
-            self.Power = np.asarray(self.Power)[0]
-            self.Power_Ratio = np.asarray(self.Power_Ratio)[0]
+        self.Power = np.asarray(self.Power)
+        self.Power_Ratio = np.asarray(self.Power_Ratio)
 
     def get_bin_power(self):
         return self.Power
@@ -130,14 +115,14 @@ class EMG:
     def get_pfd(self):
         return self.pfd
 
-    def compute_hfd(self, Kmax):
+    def compute_hfd(self):
         self.hfd = []
         for v in range(0, self.frames):
             current_frame = self.get_current_frame(v)
             L = []
             x = []
             N = len(current_frame)
-            for k in range(1, Kmax):
+            for k in range(1, self.hfd_parameter):
                 Lk = []
                 for m in range(0, k):
                     Lmk = 0
@@ -165,8 +150,7 @@ class EMG:
             current_frame = self.get_current_frame(k)
             if D is None:
                 D = np.diff(current_frame)
-                D = D.tolist()
-            D.insert(0, current_frame[0])  # pad the first difference
+            np.concatenate(([current_frame[0]], D))
             D = np.array(D)
             n = len(current_frame)
             M2 = float(sum(D ** 2)) / n
@@ -189,19 +173,15 @@ class EMG:
     def compute_spectral_entropy(self):
         self.spectral_entropy = []
         for k in range(0, self.frames):
-            if Power_Ratio is None:
-                Power, Power_Ratio = self.Power, self.Power_Ratio
+            Power, Power_Ratio = self.get_bin_power()[k], self.get_bin_power_ratio()[k]
             Spectral_Entropy = 0
             for i in range(0, len(Power_Ratio) - 1):
                 Spectral_Entropy += Power_Ratio[i] * np.log(Power_Ratio[i])
             Spectral_Entropy /= np.log(len(Power_Ratio))
             m = -1 * Spectral_Entropy
             self.spectral_entropy.append(m)
+        self.spectral_entropy = np.asarray(self.spectral_entropy)
 
-        if self.is_raw_data:
-            self.spectral_entropy = np.asarray(self.spectral_entropy)
-        else:
-            self.spectral_entropy = np.asarray(self.spectral_entropy)[0]
 
     def get_spectral_entropy(self):
         return self.spectral_entropy
@@ -210,7 +190,7 @@ class EMG:
         self.svd_entropy = []
         for k in range(0, self.frames):
             if W is None:
-                Y = self.get_embed_seq()
+                Y = self.get_embed_seq()[k]
                 W = np.linalg.svd(Y, compute_uv=0)
                 W /= sum(W)  # normalize singular values
             m = -1 * sum(W * np.log(W))
@@ -242,45 +222,45 @@ class EMG:
     def get_fisher_info(self):
         return self.fisher_info
 
-    def compute_ap_entropy(self, M, R):
+    def compute_ap_entropy(self):
         self.ap_entropy = []
         for k in range(0, self.frames):
             current_frame = self.get_current_frame(k)
             N = len(current_frame)
-            Em = self.get_embed_seq()
+            Em = self.get_embed_seq()[k]
             A = np.tile(Em, (len(Em), 1, 1))
             B = np.transpose(A, [1, 0, 2])
             D = np.abs(A - B)  # D[i,j,k] = |Em[i][k] - Em[j][k]|
-            InRange = np.max(D, axis=2) <= R
+            InRange = np.max(D, axis=2) <= self.r
             Cm = InRange.mean(axis=0)
-            Dp = np.abs(np.tile(current_frame[M:], (N - M, 1)) - np.tile(current_frame[M:], (N - M, 1)).T)
-            Cmp = np.logical_and(Dp <= R, InRange[:-1, :-1]).mean(axis=0)
+            Dp = np.abs(np.tile(current_frame[self.embedded_dimension:],
+                                (N - self.embedded_dimension, 1)) - np.tile(current_frame[self.embedded_dimension:],
+                                                                            (N - self.embedded_dimension, 1)).T)
+            Cmp = np.logical_and(Dp <= self.r, InRange[:-1, :-1]).mean(axis=0)
             Phi_m, Phi_mp = np.sum(np.log(Cm)), np.sum(np.log(Cmp))
-            m = (Phi_m - Phi_mp) / (N - M)
+            m = (Phi_m - Phi_mp) / (N - self.embedded_dimension)
             self.ap_entropy.append(m)
 
-        if self.is_raw_data:
-            self.ap_entropy = np.asarray(self.ap_entropy)
-        else:
-            self.ap_entropy = np.asarray(self.ap_entropy)[0]
+        self.ap_entropy = np.asarray(self.ap_entropy)
 
     def get_ap_entropy(self):
         return self.ap_entropy
 
-    def compute_samp_entropy(self, M, R):
+    def compute_samp_entropy(self):
         self.samp_entropy = []
         for k in range(0, self.frames):
             current_frame = self.get_current_frame(k)
             N = len(current_frame)
-            Em = self.get_embed_seq()
+            Em = self.get_embed_seq()[k]
             A = np.tile(Em, (len(Em), 1, 1))
             B = np.transpose(A, [1, 0, 2])
             D = np.abs(A - B)  # D[i,j,k] = |Em[i][k] - Em[j][k]|
-            InRange = np.max(D, axis=2) <= R
+            InRange = np.max(D, axis=2) <= self.r
             np.fill_diagonal(InRange, 0)  # Don't count self-matches
             Cm = InRange.sum(axis=0)  # Probability that random M-sequences are in range
-            Dp = np.abs(np.tile(current_frame[M:], (N - M, 1)) - np.tile(current_frame[M:], (N - M, 1)).T)
-            Cmp = np.logical_and(Dp <= R, InRange[:-1, :-1]).sum(axis=0)
+            Dp = np.abs(np.tile(current_frame[self.embedded_dimension:], (N - self.embedded_dimension, 1))
+                        - np.tile(current_frame[self.embedded_dimension:], (N - self.embedded_dimension, 1)).T)
+            Cmp = np.logical_and(Dp <= self.r, InRange[:-1, :-1]).sum(axis=0)
             # Uncomment below for old (miscounted) version
             # InRange[np.triu_indices(len(InRange))] = 0
             # InRange = InRange[:-1,:-2]
@@ -292,11 +272,8 @@ class EMG:
             # Avoid taking log(0)
             Samp_En = np.log(np.sum(Cm + 1e-100) / np.sum(Cmp + 1e-100))
             self.samp_entropy.append(Samp_En)
+        self.samp_entropy = np.asarray(self.samp_entropy)
 
-        if self.is_raw_data:
-            self.samp_entropy = np.asarray(self.samp_entropy)
-        else:
-            self.samp_entropy = np.asarray(self.samp_entropy)[0]
 
     def get_samp_entropy(self):
         return self.samp_entropy
@@ -345,7 +322,7 @@ class EMG:
         self.permutation_entropy = []
         for k in range(0, self.frames):
             PeSeq = []
-            Em = self.get_embed_seq()
+            Em = self.get_embed_seq()[k]
             for i in range(0, len(Em)):
                 r = []
                 z = []

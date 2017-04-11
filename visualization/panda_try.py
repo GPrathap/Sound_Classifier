@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 import pandas as pd
 from pandas import DataFrame, Series
+from scipy import signal
 
 fsamp = 250
 tsample = 1 / fsamp
@@ -30,20 +31,29 @@ b3, a3 = butter(order, Wn, btype='stop')
 for i in range(0, n_ch):
     processed_signal.ix[:, i] = np.transpose(filtfilt(b3, a3, processed_signal.ix[:, i]))
 
-start = 520
-end = 620
-
+start = 0
+end = 60
 plt.figure(figsize=(12, 8))
-plt.subplot(511)
-plt.plot(processed_signal.ix[:, 0][start * fsamp:end * fsamp])
-plt.subplot(512)
-plt.plot(processed_signal.ix[:, 1][start * fsamp:end * fsamp])
-plt.subplot(513)
-plt.plot(processed_signal.ix[:, 2][start * fsamp:end * fsamp])
-plt.subplot(514)
-plt.plot(processed_signal.ix[:, 3][start * fsamp:end * fsamp])
-plt.subplot(515)
-plt.plot(processed_signal.ix[:, 4][start * fsamp:end * fsamp])
+for h in range(0, n_ch):
+    plt.subplot(5,1,h+1)
+    # f, Pxx_spec = signal.periodogram(processed_signal.ix[:, h][start * fsamp:end * fsamp], fsamp, 'flattop',
+    #                                  scaling='spectrum')
+
+    # f, Pxx_spec = signal.welch(processed_signal.ix[:, h][start * fsamp:end * fsamp], fsamp, 'flattop', 128, scaling='spectrum')
+    # wavelet = signal.ricker
+    # widths = np.arange(1, 11)
+    # cwtmatr = signal.cwt(processed_signal.ix[:, h][start * fsamp:end * fsamp], wavelet, widths)
+    # plt.plot(cwtmatr)
+    # plt.semilogy(fsamp, np.sqrt(Pxx_spec))
+    # plt.ylim([1e-4, 1e1])
 plt.show()
+
+
+# plt.figure()
+# plt.semilogy(f, np.sqrt(Pxx_spec))
+# plt.ylim([1e-4, 1e1])
+# plt.xlabel('frequency [Hz]')
+# plt.ylabel('Linear spectrum [V RMS]')
+# plt.show()
 
 print "---"

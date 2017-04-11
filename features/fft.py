@@ -4,18 +4,14 @@ import numpy as np
 from utils import feature_extractor as utils
 
 class FFT:
-    def __init__(self, audio, dependencies=None, number_of_bins=1024, frame=2048, sampling_rate=44000, is_raw_data=True):
+    def __init__(self, audio, config):
         self.audio = audio
-        self.dependencies = dependencies
-        self.frame = frame
-        self.sampling_rate = sampling_rate
-        self.number_of_bins = number_of_bins
-        self.is_raw_data =  is_raw_data
-        if self.is_raw_data:
-            self.frames = int(np.ceil(len(self.audio.data) / 1000.0 * self.sampling_rate / self.frame))
-        else:
-            self.frames = 1
-
+        self.dependencies = config["fft"]["dependencies"]
+        self.frame_size = int(config["frame_size"])
+        self.sampling_rate = int(config["sampling_rate"])
+        self.number_of_bins = int(config["fft"]["number_of_bins"])
+        self.is_raw_data = config["is_raw_data"]
+        self.frames = int(np.ceil(len(self.audio.data) /self.frame_size))
 
     def __enter__(self):
         print "Initializing fft calculation..."
@@ -27,19 +23,12 @@ class FFT:
         self.fft = []
         self.logamplitude = []
         for i in range(0, self.frames):
-            if self.is_raw_data:
-                current_frame = utils._get_frame(self.audio, i, self.frame)
-            else:
-                current_frame = self.audio.data
+            current_frame = utils._get_frame_array(self.audio, i, self.frame_size)
             ps = np.abs(np.fft.fft(current_frame, self.number_of_bins))
             self.fft.append(ps)
             self.logamplitude.append(librosa.logamplitude(ps ** 2))
-        if self.is_raw_data:
-            self.fft = np.asarray(self.fft)
-            self.logamplitude = np.asarray(self.logamplitude)
-        else:
-            self.fft = np.asarray(self.fft)[0]
-            self.logamplitude = np.asarray(self.logamplitude)[0]
+        self.fft = np.asarray(self.fft)
+        self.logamplitude = np.asarray(self.logamplitude)
 
     def get_fft_spectrogram(self):
         return self.fft

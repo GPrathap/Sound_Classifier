@@ -9,15 +9,16 @@ from preprocessing import PreProcessor
 from RingBuffer import RingBuffer
 from utils.dataset_writer_utils import create_sample_from_data
 from utils.utils import get_label
+import init_buffer as buf
 
 
 class NoiseReducer(threading.Thread):
-    def __init__(self, thread_id, input_data, server, writer, config):
+    def __init__(self, thread_id, server, writer, config):
         threading.Thread.__init__(self)
         self.config = config
         self.window_size = int(config["window_size"])
         self.verbose = eval(config["verbose"])
-        self.input_data = input_data
+        self.input_data = buf.ring_buffers
         self.number_of_threads = int(config["number_of_channels"])
         self.feature_vector_size = int(config["feature_vector_size"])
         self.train_dir = str(config["train_dir_abs_location"])
@@ -29,7 +30,7 @@ class NoiseReducer(threading.Thread):
         self.is_processing = False
         self.server = server
         self.writer = writer
-        self.number_of_class = int(config["model"]["number_of_class"])
+        self.number_of_class = int(config["processing"]["train"]["number_of_class"])
         self.ip = str(config["ip"])
         self.port = int(config["port"]) + 5  # adding five offset to secondary udp server
         self.overlap_size = int(config["overlap_size"])
@@ -72,7 +73,7 @@ class NoiseReducer(threading.Thread):
         #         np.savetxt(f, self.output_buffer, delimiter=',', fmt='%.18e')
 
         class_label = get_label(1, self.number_of_class)
-        sample = create_sample_from_data(self.output_buffer, class_label)
+        sample = create_sample_from_data(self.output_buffer.flatten(), class_label)
         self.writer.write(sample.SerializeToString())
         self.send_noise_data(json.dumps(self.input_buffer.tolist()))
         self.send_preprocessed_data(json.dumps(self.output_buffer.tolist()))
