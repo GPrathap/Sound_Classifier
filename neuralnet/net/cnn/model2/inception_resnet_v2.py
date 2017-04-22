@@ -33,11 +33,11 @@ class CNNModel2:
             self.logs_path = project_dir + str(meta_info["net"]["logs_path"])
             self.keep_prob = float(meta_info["net"]["keep_prob"])
 
-            self.num_channels = int(meta_info_data_set["num_channels"])
+            self.num_channels = int(meta_info_data_set["number_of_channels"])
             self.n_classes = int(meta_info_data_set["number_of_class"])
             self.image_width = int(meta_info_data_set["generated_image_width"])
             self.image_height = int(meta_info_data_set["generated_image_height"])
-            self.feature_vector_size = self.image_height*self.image_width
+            self.feature_vector_size = self.image_height*self.image_width*3
 
             with tf.name_scope('Inputs'):
                 self.x_input = tf.placeholder(tf.float32, [None, self.feature_vector_size], name='InputData')
@@ -130,7 +130,7 @@ class CNNModel2:
       """
       end_points = {}
 
-      inputs = tf.reshape(self.x_input, shape=[-1, self.image_width, self.image_height, self.num_channels])
+      inputs = tf.reshape(self.x_input, shape=[-1, self.image_width, self.image_height, 3])
 
       with tf.variable_scope(scope, 'InceptionResnetV2', [inputs], reuse=reuse):
         with slim.arg_scope([slim.batch_norm, slim.dropout],

@@ -19,6 +19,10 @@ lib64/
 parts/
 sdist/
 var/
+.idea/
+/build/dataset
+/neuralnet/net/cnn/model2/graph
+/neuralnet/net/cnn/model2/model
 *.egg-info/
 .installed.cfg
 *.egg
