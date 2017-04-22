@@ -1,11 +1,11 @@
 {
   "fft":{
     "dependencies":"False",
-    "number_of_bins":64
+    "number_of_bins":384
   },
   "emg":{
     "dependencies":"False",
-    "number_of_bins":64,
+    "number_of_bins":384,
     "time_lag":1,
     "embedded_dimension":16,
     "boundary_frequencies":[0.5,4,7,12,30],
