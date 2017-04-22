@@ -1,2 +1,2 @@
 ring_buffers = []
-max_iteration = 400
+max_iteration = 10

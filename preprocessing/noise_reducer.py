@@ -1,15 +1,12 @@
 import json
-import random
-import socket
 import threading
+
 import numpy as np
 
-
-from preprocessing import PreProcessor
-from RingBuffer import RingBuffer
-from utils.dataset_writer_utils import create_sample_from_data
-from utils.utils import get_label
 import init_buffer as buf
+from preprocessing import PreProcessor
+from py_qt.utils import draw_sample_plot_and_save, create_sample_from_image
+from py_qt.utils import get_label
 
 
 class NoiseReducer(threading.Thread):
@@ -22,6 +19,7 @@ class NoiseReducer(threading.Thread):
         self.number_of_threads = int(config["number_of_channels"])
         self.feature_vector_size = int(config["feature_vector_size"])
         self.train_dir = str(config["train_dir_abs_location"])
+        self.counter=0
         # self.train_dir = str(config["train_dir"])
         self.lock = threading.Lock()
         self.input_buffer = np.zeros([self.number_of_threads, self.window_size])
@@ -60,6 +58,7 @@ class NoiseReducer(threading.Thread):
             print("Existing " + str(self.thread_id))
 
     def process_signal(self):
+        self.counter += 1
         self.output_buffer = np.zeros([self.input_buffer.shape[0], self.feature_vector_size])
         threads = []
         thread_list = [i for i in range(0, self.number_of_threads)]
@@ -72,8 +71,10 @@ class NoiseReducer(threading.Thread):
         # with open(self.train_dir + "/feature_vectors.csv", 'a') as f:
         #         np.savetxt(f, self.output_buffer, delimiter=',', fmt='%.18e')
 
-        class_label = get_label(1, self.number_of_class)
-        sample = create_sample_from_data(self.output_buffer.flatten(), class_label)
+        clip_label = get_label(1, self.number_of_class)
+        clip_filename = draw_sample_plot_and_save(self.output_buffer.flatten(), "/channel", self.thread_id, self.config)
+        sample = create_sample_from_image(clip_filename, clip_label, self.config)
+        # sample = create_sample_from_data(self.output_buffer.flatten(), class_label)
         self.writer.write(sample.SerializeToString())
         self.send_noise_data(json.dumps(self.input_buffer.tolist()))
         self.send_preprocessed_data(json.dumps(self.output_buffer.tolist()))
@@ -100,7 +101,7 @@ class NoiseReducer(threading.Thread):
 #             for k in range(0, number_of_channels):
 #                 for p in range(0, buffer_size*buffer_capacity):
 #                     ring_buffers[k].append(random.randint(1,100))
-#             writer = tf.python_io.TFRecordWriter(tfrecords_filename)
+#             writer = tf.python_io.TFRecordWriter(t ,mfrecords_filename)
 #             noisereducer_thread =  NoiseReducer("main thread",ring_buffers,server,lock, writer, plugin_config)
 #             i = 0
 #             while i<100:

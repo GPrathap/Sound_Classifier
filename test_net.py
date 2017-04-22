@@ -94,8 +94,8 @@ def runTest(loader, cnn_model):
 
 
 
-project_dir = "/home/runge/projects/sound_detector"
-dataset_dir = "/home2/geesara/dataset/ESC-10"
+project_dir = "/home/runge/openbci/git/OpenBCI_Python"
+dataset_dir = "/home/runge/openbci/git/OpenBCI_Python/build/dataset"
 loader = DataLoader(project_dir, dataset_dir)
 cnn_model = CNNModel2(project_dir, loader.get_train_config())
 

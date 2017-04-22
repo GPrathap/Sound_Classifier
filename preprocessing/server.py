@@ -4,11 +4,13 @@ import socket
 import sys
 import threading
 
+import numpy as np
+
 from RingBuffer import RingBuffer
 
 
 class UDPServer(threading.Thread):
-    def __init__(self, threadID, input_buffer, port, receiver_port, ip="localhost"):
+    def __init__(self, threadID, input_buffer, port, receiver_port, ip="localhost", verbose=False):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.isRun = True
@@ -20,11 +22,14 @@ class UDPServer(threading.Thread):
         self.previous_buffer = [34, 67, 89]
         self.buffer = input_buffer
         self.receiver_port = receiver_port
+        self.verbose = verbose
+        if self.verbose:
+            self.file_descriptor = ""
         try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind(self.server_address)
         except:
-            print "Error: while starting up udp server"
+            print ("Error: while starting up udp server")
 
     def run(self):
         print ('starting up on %s port %s \n' % self.server_address)
@@ -45,25 +50,36 @@ class UDPServer(threading.Thread):
         #     self.lock.release()
         return self.previous_buffer
 
-    def call_back_handler(self):
+    def retrieve_data(self):
         while self.isRun:
             data, address = self.socket.recvfrom(self.receiver_port)
             data = json.loads(data)
-            # print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
-            # print >> sys.stderr, data
+            result = []
             if data:
                 self.lock.acquire()
-                # print (data)
+                if self.verbose:
+                    print (data)
                 self.buffer.append(data)
                 self.previous_buffer = data
+                result.append(data)
+                result = np.asarray(result)
+                np.savetxt(self.file_descriptor, result, delimiter=',', fmt='%.18e')
                 self.lock.release()
 
+    def call_back_handler(self):
+        if self.verbose:
+            with open("/home/runge/openbci/git/OpenBCI_Python/build/dataset/kincet_anagles/kinect_angles.csv", 'a')\
+                    as self.file_descriptor:
+                self.retrieve_data()
+        else:
+            self.retrieve_data()
 
 # kinect_angles = RingBuffer(20, dtype=list)
 # ip = "0.0.0.0"
 # port = 8889
 # receiver_port = 4096
-# thread = UDPServer("udp_server", kinect_angles, port, receiver_port, ip)
+# thread = UDPServer("udp_server", kinect_angles, port, receiver_port, ip, True)
 # thread.start()
 # thread.isRun = True
 # thread.join()
+

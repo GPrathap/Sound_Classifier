@@ -14,44 +14,118 @@ import mne
 
 print(__doc__)
 
-
-
 sfreq = 250
 tsample = 1 / sfreq
 f_low = 50
 f_high = 1
 order = 2
-channel_vector = [1,2, 3, 4, 5]
+channel_vector = [1, 2, 3, 4, 5]
 data = []
 ch_types = []
 ch_names = []
 n_ch = len(channel_vector)
+start=0
+end=2
 
 df = pd.read_csv("/home/runge/openbci/application.linux64/application.linux64/OpenBCI-RAW-right_strait_up_new.txt")
 df = df[channel_vector].dropna(axis=0)
 
-# Set parameters
-data_path = sample.data_path()
-raw_fname = data_path + '/MEG/sample/sample_audvis_raw.fif'
-proj_fname = data_path + '/MEG/sample/sample_audvis_eog-proj.fif'
-
-
-for i in range(0,n_ch):
-    data.append(df.ix[:,i])
+for i in range(0, n_ch):
+    # dfm[i].ix[:, 0] = ((dfm[i].ix[:,0] - dfm[i].ix[:,0].min(0)) / dfm[i].ix[:,0].ptp(0))
+    data.append(np.array(df.ix[:,i].tolist()[int(start*sfreq):int(end*sfreq)]))
     ch_types.append('mag')
-    ch_names.append("kkkk"+str(i))
+    ch_names.append(df.ix[:,i].name)
 
 info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
 raw = mne.io.RawArray(data, info)
 scalings = 'auto'
-
-# Add SSP projection vectors to reduce EOG and ECG artifacts
-# projs = read_proj(proj_fname)
-# raw.add_proj(projs, remove_existing=True)
-
-# raw.plot(n_channels=n_ch, scalings=scalings, title='MEG data visualization over time', show=True, block=True)
+raw.plot(n_channels=n_ch, scalings=scalings, title='MEG data visualization over time', show=True, block=True)
 
 
+# Set parameters
+# data_path = sample.data_path()
+# raw_fname = data_path + '/MEG/sample/sample_audvis_raw.fif'
+# proj_fname = data_path + '/MEG/sample/sample_audvis_eog-proj.fif'
+#
+# df1 = pd.read_csv("/home/runge/openbci/git/OpenBCI_Python/build/dataset/3noise_signal.csv")
+# df1 = df1.dropna(axis=0)
+#
+# df2 = pd.read_csv("/home/runge/openbci/git/OpenBCI_Python/build/dataset/3noise_reduced_signal.csv")
+# df2 = df2.dropna(axis=0)
+#
+# df3 = pd.read_csv("/home/runge/openbci/git/OpenBCI_Python/build/dataset/reconstructed_mod.csv")
+# df3 = df3.dropna(axis=0)
+#
+# df4 = pd.read_csv("/home/runge/openbci/git/OpenBCI_Python/build/dataset/2feature_vector.csv")
+# df4 = df4.dropna(axis=0)
+#
+# dfm = []
+# dfm.append(df1)
+# dfm.append(df2)
+# dfm.append(df3)
+# dfm.append(df4)
+
+# max_length = len(df3.ix[:,0])
+#
+# dfm_len = 3
+#
+# for i in range(0, dfm_len):
+#     # dfm[i].ix[:, 0] = ((dfm[i].ix[:,0] - dfm[i].ix[:,0].min(0)) / dfm[i].ix[:,0].ptp(0))
+#     data.append(np.array(dfm[i].ix[:,0].tolist()[0:max_length]))
+#     ch_types.append('mag')
+#     ch_names.append(dfm[i].ix[:,0].name)
+
+# info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+# raw = mne.io.RawArray(data, info)
+# scalings = 'auto'
+# raw.plot(n_channels=dfm_len, scalings=scalings, title='MEG data visualization over time', show=True, block=True)
+
+#
+# start = 10
+# end = 11
+# plt.figure(figsize=(12, 8))
+# for h in range(1, dfm_len):
+#     # plt.subplot(dfm_len-1,1,h)
+#     # plt.plot(data[h][int(start*sfreq):int(end*sfreq)])
+#     plt.plot(data[h][int(start*sfreq):int(end*sfreq)])
+# plt.show()
+#
+
+# start = 30
+# end = 50
+# number_of_plots = end-start
+# plt.figure(figsize=(12, 8))
+# for h in range(0, number_of_plots):
+#     plt.subplot(number_of_plots,1,h+1)
+#     plt.plot(df4.ix[start+h].tolist())
+# plt.show()
+
+# fmin, fmax = 2, 300
+# tmin, tmax = 0, 130
+# n_fft = 64
+#
+# # Let's first check out all channel types
+# # raw.plot_psd(area_mode='range', tmax=10.0, show=False)
+#
+# picks = mne.pick_types(raw.info, meg='mag', eeg=False, eog=False,
+#                        stim=False)
+# picks = picks[:1]
+#
+#
+# f, ax = plt.subplots()
+# psds, freqs = psd_multitaper(raw, low_bias=True, tmin=tmin, tmax=tmax,
+#                              fmin=fmin, fmax=fmax, proj=True, picks=picks,
+#                              n_jobs=1)
+# psds = 10 * np.log10(psds)
+# psds_mean = psds.mean(0)
+# psds_std = psds.std(0)
+#
+# ax.plot(freqs, psds_mean, color='k')
+# ax.fill_between(freqs, psds_mean - psds_std, psds_mean + psds_std,
+#                 color='k', alpha=.5)
+# ax.set(title='Multitaper PSD', xlabel='Frequency',
+#        ylabel='Power Spectral Density (dB)')
+# plt.show()
 
 # EpochsArray
 # event_id = 1

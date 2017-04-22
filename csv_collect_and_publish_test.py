@@ -1,3 +1,7 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+plt.interactive(False)
 import threading
 import os
 import pandas as pd

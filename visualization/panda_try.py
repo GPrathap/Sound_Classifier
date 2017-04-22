@@ -32,7 +32,7 @@ for i in range(0, n_ch):
     processed_signal.ix[:, i] = np.transpose(filtfilt(b3, a3, processed_signal.ix[:, i]))
 
 start = 0
-end = 60
+end = 120
 plt.figure(figsize=(12, 8))
 for h in range(0, n_ch):
     plt.subplot(5,1,h+1)
@@ -43,7 +43,7 @@ for h in range(0, n_ch):
     # wavelet = signal.ricker
     # widths = np.arange(1, 11)
     # cwtmatr = signal.cwt(processed_signal.ix[:, h][start * fsamp:end * fsamp], wavelet, widths)
-    # plt.plot(cwtmatr)
+    plt.plot(processed_signal.ix[:, h][start * fsamp:end * fsamp])
     # plt.semilogy(fsamp, np.sqrt(Pxx_spec))
     # plt.ylim([1e-4, 1e1])
 plt.show()

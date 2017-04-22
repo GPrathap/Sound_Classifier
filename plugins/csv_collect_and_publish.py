@@ -41,7 +41,7 @@ class MainThread(threading.Thread):
                             buf.ring_buffers[0].__len__() > self.buffer_size:
                 # if not plugin.noisereducer_thread.is_processing:
                 print ("next process..." + str(buf.ring_buffers[0].__len__()))
-                self.noisereducer_thread = NoiseReducer("main thread", self.server,
+                self.noisereducer_thread = NoiseReducer(str(self.counter), self.server,
                                                           self.writer, self.plugin_config)
                 self.noisereducer_thread.start()
                 self.noisereducer_thread.join()
