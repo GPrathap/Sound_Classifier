@@ -67,7 +67,7 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
             self.train_dir = self.project_file_path + str(self.plugin_config["train_dir"])
             self.plugin_config["project_file_path"] = self.project_file_path
             self.plugin_config["train_dir_abs_location"] = self.train_dir
-            self.train_file = self.train_dir + self.time_stamp + ".csv"
+            self.train_file = self.train_dir + self.time_stamp + "new_up.csv"
             self.start_time = timeit.default_timer()
             self.delim = ","
             self.verbose = eval(self.plugin_config["verbose"])
@@ -151,8 +151,9 @@ class PluginCSVCollectAndPublish(plugintypes.IPluginExtended):
                     print (kinect_angles)
         row[-1].replace(",", "")
         row += '\n'
+        # buf.channel_data = row
         with open(self.train_file, 'a') as f:
             f.write(row)
 
-        self.main_thread.start()
+        # self.main_thread.start()
 

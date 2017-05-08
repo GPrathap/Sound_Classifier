@@ -1,7 +1,7 @@
 {
   "fft":{
     "dependencies":"False",
-    "number_of_bins":384
+    "number_of_bins":64
   },
   "emg":{
     "dependencies":"False",

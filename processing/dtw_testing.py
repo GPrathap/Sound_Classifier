@@ -1,3 +1,6 @@
+from numpy.linalg import norm
+
+from lib.dtw import dtw
 from scipy.signal import butter, filtfilt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,29 +34,33 @@ b3, a3 = butter(order, Wn, btype='stop')
 for i in range(0, n_ch):
     processed_signal.ix[:, i] = np.transpose(filtfilt(b3, a3, processed_signal.ix[:, i]))
 
+
 start = 7000
 end = 8000
-plt.figure(figsize=(12, 8))
-for h in range(0, n_ch):
-    plt.subplot(5,1,h+1)
-    # f, Pxx_spec = signal.periodogram(processed_signal.ix[:, h][start * fsamp:end * fsamp], fsamp, 'flattop',
-    #                                  scaling='spectrum')
 
-    # f, Pxx_spec = signal.welch(processed_signal.ix[:, h][start * fsamp:end * fsamp], fsamp, 'flattop', 128, scaling='spectrum')
-    # wavelet = signal.ricker
-    # widths = np.arange(1, 11)
-    # cwtmatr = signal.cwt(processed_signal.ix[:, h][start * fsamp:end * fsamp], wavelet, widths)
-    plt.plot(processed_signal.ix[:, h][start :end])
-    # plt.semilogy(fsamp, np.sqrt(Pxx_spec))
-    # plt.ylim([1e-4, 1e1])
+def nomalize_signal(input_signal):
+    mean = np.mean(input_signal, axis=0)
+    input_signal -= mean
+    return input_signal / np.std(input_signal, axis=0)
+
+processed_signal = nomalize_signal(processed_signal)
+
+pattern=np.array(processed_signal.ix[:, 2][start :end]).reshape(-1,1)
+data=np.array(processed_signal.ix[:, 2][7000:8000]).reshape(-1,1)
+
+def my_custom_norm(x, y):
+    return (x * x) + (y * y)
+
+dist, cost, acc, path = dtw(pattern, data, dist=my_custom_norm)
+print 'Normalized distance between the two sounds:', dist, cost, acc
+
+plt.imshow(acc.T, origin='lower', interpolation='nearest')
+plt.plot(cost-acc, 'w')
+# plt.xlim((-0.5, acc.shape[0]-0.5))
+# plt.ylim((-0.5, acc.shape[1]-0.5))
 plt.show()
 
-
-# plt.figure()
-# plt.semilogy(f, np.sqrt(Pxx_spec))
-# plt.ylim([1e-4, 1e1])
-# plt.xlabel('frequency [Hz]')
-# plt.ylabel('Linear spectrum [V RMS]')
-# plt.show()
-
-print "---"
+# x = np.array([0, 0, 1, 1, 2, 4, 2, 1, 2, 0]).reshape(-1, 1)
+# y = np.array([1, 1, 1, 2, 2, 2, 2, 3, 2, 0]).reshape(-1, 1)
+#
+# dist, cost, acc, path = dtw(x, y, dist=my_custom_norm)

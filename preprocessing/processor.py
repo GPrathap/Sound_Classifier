@@ -1,15 +1,21 @@
-# import json
-# import os
-#
-# import seaborn as sb
-#
-# from features.fft import FFT
-# from features.generic_type import EMG
-# from features.mean import Mean
-# from features.mfcc import MFCC
-# from features.zcr import ZCR
-# from manager import FeatureManager
-# from utils.Audio import Audio
+import json
+import os
+
+import seaborn as sb
+
+from features.fft import FFT
+from features.generic_type import EMG
+from features.mean import Mean
+from features.mfcc import MFCC
+from features.zcr import ZCR
+from manager import FeatureManager
+import pandas as pd
+from pandas import DataFrame, Series
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+from utils.Audio import Audio
 #
 # sb.set(style="white", palette="muted")
 #
@@ -164,12 +170,9 @@
 import json
 import os
 
-import seaborn as sb
-
 from features.fft import FFT
 from features.generic_type import EMG
 from manager import FeatureManager
-from py_qt.utils import Audio
 
 sb.set(style="white", palette="muted")
 
@@ -212,7 +215,7 @@ class Clip:
             self.featureManager.getRegisteredFeature("fft").compute_fft()
             # self.featureManager.getRegisteredFeature("emg").compute_hurst()
             # self.featureManager.getRegisteredFeature("emg").compute_embed_seq()
-            self.featureManager.getRegisteredFeature("emg").compute_bin_power()
+            # self.featureManager.getRegisteredFeature("emg").compute_bin_power()
             # self.featureManager.getRegisteredFeature("emg").compute_pfd()
             # self.featureManager.getRegisteredFeature("emg").compute_hfd()
             # self.featureManager.getRegisteredFeature("emg").compute_hjorth()
@@ -227,9 +230,10 @@ class Clip:
 
     def get_feature_vector(self):
         # self.featureManager.getRegisteredFeature("emg").get_hurst()
-        return self.featureManager.getRegisteredFeature("fft").get_logamplitude()
+        # return self.featureManager.getRegisteredFeature("fft").get_logamplitude()
+        return self.featureManager.getRegisteredFeature("fft").get_fft_spectrogram()
 
-# fsamp = 250
+fsamp = 256
 # tsample = 1 / fsamp
 # f_low = 50
 # f_high = 1
@@ -272,15 +276,17 @@ class Clip:
 #
 # project_file_path = "/home/runge/openbci/git/OpenBCI_Python"
 # config_file = project_file_path + "/config/config.json"
+# raw_reconstructed_signals = pd.read_csv(project_file_path+"/build/dataset/train/result/raw_reconstructed_signals.csv")
 # with open(config_file) as config:
 #     config = json.load(config)
-#
 #     start = 100
 #     end = 110
 #     plt.figure(figsize=(12, 8))
 #     for h in range(0, 4):
 #         plt.subplot(4,1,h+1)
-#         # clip = Clip(config, buffer=np.array(processed_signal.ix[:, h][start * fsamp:end * fsamp].tolist()))
+#         input_signal = raw_reconstructed_signals.ix[:,h][start * fsamp:end * fsamp]
+#
+#         # clip = Clip(config, buffer=np.array(input_signal.tolist()))
 #         # f, Pxx_spec = signal.periodogram(processed_signal.ix[:, h][start * fsamp:end * fsamp], fsamp, 'flattop',
 #         #                                  scaling='spectrum')
 #
@@ -288,7 +294,8 @@ class Clip:
 #         # wavelet = signal.ricker
 #         # widths = np.arange(1, 11)
 #         # cwtmatr = signal.cwt(processed_signal.ix[:, h][start * fsamp:end * fsamp], wavelet, widths)
-#         plt.plot(df[h].ix[:,0][start * fsamp:end * fsamp])
+#         # plt.plot(raw_reconstructed_signals[h].ix[:,0][start * fsamp:end * fsamp])
+#         plt.plot(input_signal)
 #         # plt.semilogy(fsamp, np.sqrt(Pxx_spec))
 #         # plt.ylim([1e-4, 1e1])
 #     plt.show()

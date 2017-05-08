@@ -5,8 +5,10 @@ import numpy as np
 
 import init_buffer as buf
 from preprocessing import PreProcessor
-from py_qt.utils import draw_sample_plot_and_save, create_sample_from_image
-from py_qt.utils import get_label
+# import draw_sample_plot_and_save, create_sample_from_image
+# import get_label
+from utils.dataset_writer_utils import draw_sample_plot_and_save, create_sample_from_image
+from utils.utils import get_label
 
 
 class NoiseReducer(threading.Thread):
@@ -114,4 +116,4 @@ class NoiseReducer(threading.Thread):
 #             writer.close()
 
 
-
+2332111112313233212232323322223132332212323213223231323322233232331232323233122232321321233132332121

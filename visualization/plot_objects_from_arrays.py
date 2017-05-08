@@ -21,19 +21,19 @@ tsample = 1 / sfreq
 f_low = 50
 f_high = 1
 order = 2
-channel_vector = [1,2, 3, 4, 5]
+channel_vector = [1,2, 3, 4, 5,6,7,8,9,10,11,12]
 data = []
 ch_types = []
 ch_names = []
-n_ch = len(channel_vector)
+n_ch = 5
 
-df = pd.read_csv("/home/runge/openbci/application.linux64/application.linux64/OpenBCI-RAW-right_strait_up_new.txt")
-df = df[channel_vector].dropna(axis=0)
+df = pd.read_csv("/home/runge/openbci/git/OpenBCI_Python/build/dataset/train/result/raw_reconstructed_signals.csv")
+df = df.dropna(axis=0)
 
 # Set parameters
-data_path = sample.data_path()
-raw_fname = data_path + '/MEG/sample/sample_audvis_raw.fif'
-proj_fname = data_path + '/MEG/sample/sample_audvis_eog-proj.fif'
+# data_path = sample.data_path()
+# raw_fname = data_path + '/MEG/sample/sample_audvis_raw.fif'
+# proj_fname = data_path + '/MEG/sample/sample_audvis_eog-proj.fif'
 
 
 for i in range(0,n_ch):
@@ -49,7 +49,7 @@ scalings = 'auto'
 # projs = read_proj(proj_fname)
 # raw.add_proj(projs, remove_existing=True)
 
-# raw.plot(n_channels=n_ch, scalings=scalings, title='MEG data visualization over time', show=True, block=True)
+raw.plot(n_channels=n_ch, scalings=scalings, title='MEG data visualization over time', show=True, block=True)
 
 
 

@@ -304,7 +304,7 @@ class NonParamRegression(object):
         Method to call to fit the parameters of the fitting
         """
         D, N = self._xdata.shape
-        assert self._ydata.shape[0] == N, "There must be as many points for X and Y"
+        # assert self._ydata.shape[0] == N, "There must be as many points for X and Y"
         if self.ytrans is not None:
             self._fitted_ydata = self.ytrans(self.ydata)
         else:

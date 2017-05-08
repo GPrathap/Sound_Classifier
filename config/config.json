@@ -11,13 +11,14 @@
   "is_raw_data":"False",
   "buffer_capacity":3,
   "feature_vector_size":384,
-  "window_size":768,
-  "overlap_size":256,
+  "window_size":32,
+  "overlap_size":16,
   "sampling_rate":256,
   "low_frequency":50,
   "high_frequency":1,
   "order":2,
   "number_of_channels":5,
+  "number_of_principle_component":1,
   "channel_vector":[1,2, 3, 4, 5],
   "processing": {
       "train": {
