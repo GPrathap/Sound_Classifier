@@ -34,7 +34,7 @@ order = 2
 
 project_file_path = "/home/runge/openbci/git/OpenBCI_Python"
 config_file = project_file_path + "/config/config.json"
-raw_reconstructed_signals = pd.read_csv(project_file_path+"/build/dataset/train/result/raw_reconstructed_signalbycepts.csv")
+raw_reconstructed_signals = pd.read_csv(project_file_path+"/build/dataset/train/result/bycept_reconstructed_signals.csv")
 # raw_channels_data = pd.read_csv(project_file_path+"/build/dataset/result_bicep.csv").ix[:,2:7].dropna()
 # scatter_matrix(raw_channels_data, alpha=0.2, figsize=(6, 6), diagonal='kde')
 channels_names = ["ch1", "ch2", "ch3", "ch4", "ch5"]
