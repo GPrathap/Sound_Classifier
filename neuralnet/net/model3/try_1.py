@@ -18,7 +18,7 @@ class Deviatev1:
         self.column_names = ['ch1', 'ch2', 'ch3']
         self.number_of_eatures = 5
         self.number_of_labels = 180
-        self.num_epochs = 5000
+        self.num_epochs = 500000
         self.learning_rate =0.00004
         self.batch_size = 2000
         self.keep_prob = 0.9
@@ -268,7 +268,7 @@ class Deviatev1:
             early_stopping_rounds=200000)
         tensors_to_log = {"classes": "angles"}
         logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=1000)
-        estimator.fit(x=self.train_x, y=self.train_y, steps=50, monitors=[validation_monitor], batch_size=self.batch_size)
+        estimator.fit(x=self.train_x, y=self.train_y, steps=self.num_epochs, monitors=[validation_monitor], batch_size=self.batch_size)
 
         test_results = estimator.evaluate(x=self.test_x, y=self.test_y, steps=1)
         print("Loss: %s" % test_results["loss"])
