@@ -27,7 +27,7 @@ class Deviatev1:
         self.num_steps = 30
         self.dnn_layer_size = 10
         self.number_of_channels = 5
-        self.lstm_cell_layes_sizes = [256, 128, 64]
+        self.lstm_cell_layes_sizes = [512, 256, 128, 128, 64]
         self.model_params = {"learning_rate": self.learning_rate, "keep_prob": self.keep_prob
             , 'num_steps': self.num_steps, 'num_layers_rnn':self.num_layers_rnn, 'dnn_layer_size': self.dnn_layer_size
             , 'number_of_labels': self.number_of_labels }
