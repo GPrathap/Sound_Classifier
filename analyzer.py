@@ -216,8 +216,8 @@ class SignalAnalyzer():
             final_result = []
             size = pattern_end_at - pattern_start_at
             counter = start
-            # for i in range(0, int(np.floor((end-start)/5))):
-            for i in range(0, 3):
+            for i in range(0, int(np.floor((end-start)/5))):
+            # for i in range(0, 3):
                 y = np.array(nomalized_signal.ix[:, channel_number][counter:counter + size]).tolist()
                 possion.append(counter)
                 counter += 5
@@ -291,11 +291,10 @@ class SignalAnalyzer():
 
         nomalized_signal = self.nomalize_signal(kinect_angle_data)
         # mapping = interp1d([-1,1],[0,180])
-        distance, possion = self.apply_dwt(nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, channel_number)
-
         if end==0:
             end = nomalized_signal.shape[0] - 1
 
+        distance, possion = self.apply_dwt(nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, channel_number)
         _, mintab = self.lowest_point_detect(distance, .3)
         if len(mintab)==0:
             print ("No patterns were detected...")
@@ -390,10 +389,10 @@ class SignalAnalyzer():
         self.plot_kinect_angles_with_activity_signals(start, end, is_raw=False)
 
 project_path = "/home/runge/openbci/git/OpenBCI_Python"
-dataset_location = "/home/runge/openbci/git/OpenBCI_Python/build/dataset2017-5-5_23-55-32new_straight_up_filttered.csv"
+dataset_location = project_path+ "/build/dataset2017-5-5_23-55-32new_straight_up_filttered.csv"
 activity_type = "straight_up"
 
-# dataset_location = "/home/runge/openbci/git/OpenBCI_Python/build/dataset2017-5-5_23-55-32new_bycept_filttered.csv"
+# dataset_location = project_path + "/build/dataset2017-5-5_23-55-32new_bycept_filttered.csv"
 # activity_type = "bycept"
 
 
