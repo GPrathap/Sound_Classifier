@@ -1,0 +1,6 @@
+model_checkpoint_path: "/home/runge/openbci/git/OpenBCI_Python/neuralnet/net/model3/model/model.ckpt-50"
+all_model_checkpoint_paths: "/home/runge/openbci/git/OpenBCI_Python/neuralnet/net/model3/model/model.ckpt-34"
+all_model_checkpoint_paths: "/home/runge/openbci/git/OpenBCI_Python/neuralnet/net/model3/model/model.ckpt-38"
+all_model_checkpoint_paths: "/home/runge/openbci/git/OpenBCI_Python/neuralnet/net/model3/model/model.ckpt-42"
+all_model_checkpoint_paths: "/home/runge/openbci/git/OpenBCI_Python/neuralnet/net/model3/model/model.ckpt-46"
+all_model_checkpoint_paths: "/home/runge/openbci/git/OpenBCI_Python/neuralnet/net/model3/model/model.ckpt-50"
