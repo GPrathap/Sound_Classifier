@@ -256,7 +256,7 @@ class Deviatev1:
     def execute(self):
         self.import_data(1)
         estimator = tf.contrib.learn.Estimator(model_fn=self.model_fn, params=self.model_params,
-                                        model_dir="/home/runge/openbci/git/OpenBCI_Python/neuralnet/net/model3/model",
+                                        model_dir="./model",
                                         config=tf.contrib.learn.RunConfig(save_checkpoints_secs=20))
         validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
             self.test_x,
@@ -289,7 +289,7 @@ class Deviatev1:
 
 
 
-project_loction = '/home/runge/openbci/git/OpenBCI_Python'
+project_loction = '/home2/geesara/OpenBCI_Python'
 model = Deviatev1(project_loction)
 model.execute()
 
