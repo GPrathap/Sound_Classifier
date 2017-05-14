@@ -376,17 +376,17 @@ class SignalAnalyzer():
         return np.array(maxtab), np.array(mintab)
 
     def execute(self, is_init=False):
-        start = 3710
-        end = 3830
+        start = 0
+        end = 0
         if is_init:
             self.reconstructed_channel_data()
             self.reconstructed_kinect_signals()
             self.append_channel_data()
         # self.plot_kinect_angles(start=start, end=end, is_raw=False)
         # self.plot_signals(start=start, end=end, is_raw=True)
-        # self.plot_detected_pattern(pattern_start_at=4400, pattern_end_at=5000, start=start, end=end, is_apply_dwt=True, channel_number=1)
+        self.plot_detected_pattern(pattern_start_at=4400, pattern_end_at=5000, start=start, end=end, is_apply_dwt=True, channel_number=1)
         # self.plot_detected_pattern(pattern_start_at=3710, pattern_end_at=3830, start=start, end=end, is_apply_dwt=True, channel_number=1)
-        self.plot_kinect_angles_with_activity_signals(start, end, is_raw=False)
+        #self.plot_kinect_angles_with_activity_signals(start, end, is_raw=False)
 
 project_path = "/home/runge/openbci/git/OpenBCI_Python"
 dataset_location = project_path+ "/build/dataset2017-5-5_23-55-32new_straight_up_filttered.csv"
