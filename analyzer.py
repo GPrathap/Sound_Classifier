@@ -208,9 +208,9 @@ class SignalAnalyzer():
         else:
             plt.show()
 
-    def apply_dwt(self, nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, pattern_type):
+    def apply_dwt(self, nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, channel_number=1):
         if(is_apply_dwt):
-            pattern = np.array(nomalized_signal.ix[:, 1][pattern_start_at:pattern_end_at])
+            pattern = np.array(nomalized_signal.ix[:, channel_number][pattern_start_at:pattern_end_at])
             result = []
             possion = []
             final_result = []
@@ -218,7 +218,7 @@ class SignalAnalyzer():
             counter = start
             # for i in range(0, int(np.floor((end-start)/5))):
             for i in range(0, 3):
-                y = np.array(nomalized_signal.ix[:, 1][counter:counter + size]).tolist()
+                y = np.array(nomalized_signal.ix[:, channel_number][counter:counter + size]).tolist()
                 possion.append(counter)
                 counter += 5
                 dist, cost, acc, path = dtw(pattern, y, manhattan_distances)
@@ -227,12 +227,12 @@ class SignalAnalyzer():
             final_result.append(result)
             final_result.append(possion)
 
-            with open(self.config["train_dir_abs_location"] + "/result/"+pattern_type+"_"+self.activity_type+"_dwt_result.csv", 'w') as f:
+            with open(self.config["train_dir_abs_location"] + "/result/"+self.activity_type+"_dwt_result.csv", 'w') as f:
                 np.savetxt(f, np.transpose(np.array(final_result)), delimiter=',', fmt='%.18e')
             return result, possion
         else:
             dwt_result = pd.read_csv(self.config["train_dir_abs_location"]
-                                            + "/result/"+pattern_type+"_"+self.activity_type+"_dwt_result.csv").dropna()
+                                            + "/result/"+self.activity_type+"_dwt_result.csv").dropna()
             return dwt_result.ix[:,0], dwt_result.ix[:,1]
 
     def plot_kinect_angles_with_activity_signals(self, start=0, end=0, fsamp=1, is_raw=False):
@@ -279,24 +279,28 @@ class SignalAnalyzer():
         fig.text(0.04, 0.5, 'angle(0-180)', va='center', rotation='vertical', fontsize=10)
         plt.show()
 
-    def plot_detected_pattern(self, start=0, end=0, fsamp=1, is_raw=False, pattern_start_at=0, pattern_end_at=200, is_apply_dwt=False):
+    def plot_detected_pattern(self, start=0, end=0, fsamp=1, is_raw=False, pattern_start_at=0, pattern_end_at=200, is_apply_dwt=False, channel_number=1):
         if is_raw:
             channels_data = pd.read_csv(self.dataset_location).ix[:, 2:7].dropna()
             kinect_angle_data = pd.read_csv(self.dataset_location).ix[:, 10:13].dropna()
         else:
             channels_data = pd.read_csv(self.config["train_dir_abs_location"]
-                                            + "/result/"+self.activity_type+"_feature_vectors.csv.csv").dropna()
+                                            + "/result/"+self.activity_type+"_feature_vectors.csv").dropna()
             kinect_angle_data = pd.read_csv(self.config["train_dir_abs_location"]
                                             + "/result/reconstructed_"+self.activity_type+"_kinect__angles_.csv").dropna()
 
         nomalized_signal = self.nomalize_signal(kinect_angle_data)
         # mapping = interp1d([-1,1],[0,180])
-        distance, possion = self.apply_dwt(nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, pattern_type)
+        distance, possion = self.apply_dwt(nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, channel_number)
 
         if end==0:
             end = nomalized_signal.shape[0] - 1
 
         _, mintab = self.lowest_point_detect(distance, .3)
+        if len(mintab)==0:
+            print ("No patterns were detected...")
+            return
+
         indices = possion[np.array(mintab[:, 0], dtype=int)]
 
         graph_legend = []
@@ -373,16 +377,16 @@ class SignalAnalyzer():
         return np.array(maxtab), np.array(mintab)
 
     def execute(self, is_init=False):
-        start = 1000
-        end = 0
+        start = 4400
+        end = 5000
         if is_init:
             self.reconstructed_channel_data()
             self.reconstructed_kinect_signals()
             self.append_channel_data()
         # self.plot_kinect_angles(start=start, end=end, is_raw=False)
         # self.plot_signals(start=start, end=end, is_raw=True)
-        # self.plot_detected_pattern(pattern_start_at=4400, pattern_end_at=5000, start=4000, end=5000, is_apply_dwt=True)
-        self.plot_kinect_angles_with_activity_signals(start, end, is_raw=False)
+        self.plot_detected_pattern(pattern_start_at=4400, pattern_end_at=5000, start=start, end=end, is_apply_dwt=True, channel_number=1)
+        # self.plot_kinect_angles_with_activity_signals(start, end, is_raw=False)
 
 project_path = "/home/runge/openbci/git/OpenBCI_Python"
 dataset_location = "/home/runge/openbci/git/OpenBCI_Python/build/dataset2017-5-6_0-0-33new_up.csv"
