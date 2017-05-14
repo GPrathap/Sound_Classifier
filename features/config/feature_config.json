@@ -5,11 +5,16 @@
   },
   "emg":{
     "dependencies":"False",
-    "number_of_bins":384,
+    "number_of_bins":64,
     "time_lag":1,
     "embedded_dimension":16,
     "boundary_frequencies":[0.5,4,7,12,30],
     "hfd_parameter":2,
     "r":2
+  },
+  "spectral":{
+    "dependencies":"False",
+    "number_of_bins":64,
+    "time_lag":1
   }
 }

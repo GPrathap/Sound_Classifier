@@ -1,13 +1,9 @@
-from numpy.linalg import norm
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.signal import butter, filtfilt
 
 from lib.dtw import dtw
-from scipy.signal import butter, filtfilt
-import numpy as np
-import matplotlib.pyplot as plt
-
-import pandas as pd
-from pandas import DataFrame, Series
-from scipy import signal
 
 fsamp = 250
 tsample = 1 / fsamp

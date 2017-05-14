@@ -1,131 +1,392 @@
-import librosa
-import librosa.display
+from __future__ import print_function
+
+import json
+import sys
+
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sb
+from scipy.interpolate import interp1d
 
-from loader import DataLoader
-from preprocessing import processor as api
+from lib.dtw import dtw
 
+matplotlib.rc('xtick', labelsize=15)
+matplotlib.rc('ytick', labelsize=15)
+matplotlib.rc('axes', titlesize=20)
+matplotlib.rc('legend', fontsize=20)
+# manager = plt.get_current_fig_manager()
+# manager.resize(*manager.window.maxsize())
 
-def add_subplot_axes(ax, position):
-    box = ax.get_position()
-    position_display = ax.transAxes.transform(position[0:2])
-    position_fig = plt.gcf().transFigure.inverted().transform(position_display)
-    x = position_fig[0]
-    y = position_fig[1]
-    return plt.gcf().add_axes([x, y, box.width * position[2], box.height * position[3]], axisbg='w')
-
-
-def plot_clip_overview(clip, ax):
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    ax_waveform = add_subplot_axes(ax, [0.0, 0.7, 1.0, 0.3])
-    ax_spectrogram = add_subplot_axes(ax, [0.0, 0.0, 1.0, 0.7])
-
-    with clip.audio as audio:
-        ax_waveform.plot(np.arange(0, len(audio.raw)) / float(api.Clip.RATE), audio.raw)
-        ax_waveform.get_xaxis().set_visible(False)
-        ax_waveform.get_yaxis().set_visible(False)
-        ax_waveform.set_title('{0} \n {1}'.format(clip.category, clip.filename), {'fontsize': 8}, y=1.03)
-        result = np.array(np.array(clip.feature_list['fft'].get_logamplitude()[0:1]))
-        # result = np.array(clip.feature_list['mfcc'].get_mel_spectrogram()[0:2])
-        librosa.display.specshow(result, sr=api.Clip.RATE, x_axis='time', y_axis='mel', cmap='RdBu_r')
-        ax_spectrogram.get_xaxis().set_visible(False)
-        ax_spectrogram.get_yaxis().set_visible(False)
+from matplotlib.backends.backend_pdf import PdfPages
+from sklearn.metrics.pairwise import manhattan_distances
+from preprocessing.preprocessing import PreProcessor
+from preprocessing.ssa import SingularSpectrumAnalysis
 
 
+class SignalAnalyzer():
+    def __init__(self, activity_type, project_path, dataset_location):
+        self.raw_data = pd.read_csv(dataset_location)
+        self.config_file = project_path + "/config/config.json"
+        self.raw_data = self.raw_data.ix[:, 0:13].dropna()
+        self.raw_channel_data = self.raw_data.ix[:, 2:7]
+        self.raw_kinect_angle_data = self.raw_data.ix[:, 10:13]
+        self.channel_length = self.raw_channel_data.shape[1]
+        self.kinect_angle_length = 3
+        self.angle_names = ["wrist", "elbow", "shoulder"]
+        self.signal_types = ["noise_signal", "noise_reduced_signal", "feature_vector"]
+        self.raw_channel_data_set = []
+        self.output_buffer = []
+        self.activity_type = activity_type
+        self.project_path = project_path
+        self.dataset_location = dataset_location
+        self.channels_names = ["ch1", "ch2", "ch3", "ch4", "ch5"]
+        with open(self.config_file) as config:
+            self.config = json.load(config)
+            self.config["train_dir_abs_location"] = self.project_path + "/build/dataset/train"
 
-def plot_single_clip(clip):
+    def nomalize_signal(self, input_signal):
+        mean = np.mean(input_signal, axis=0)
+        input_signal -= mean
+        return input_signal / np.std(input_signal, axis=0)
 
-    col_names_mfcc = list('MFCC_{}'.format(i) for i in range(np.shape(clip.feature_list["mfcc"].get_mfcc())[1]))
-    col_names_zcr = list('ZCR_{}'.format(i) for i in range(1))
-    MFCC = pd.DataFrame(clip.feature_list["mfcc"].get_mfcc()[:, :], columns=col_names_mfcc)
-    ZCR = pd.DataFrame(clip.feature_list["zcr"].get_zcr()[:], columns=col_names_zcr)
-    f = plt.figure(figsize=(10, 6))
-    ax = f.add_axes([0.0, 0.0, 1.0, 1.0])
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    ax.set_frame_on(False)
+    def reconstructed_channel_data(self):
+        for i in range(0, self.channel_length):
+            self.raw_channel_data_set.append(self.nomalize_signal(self.raw_channel_data.ix[:, i]))
+        for i in range(0, self.channel_length):
+            preprocessor = PreProcessor(i, self.raw_channel_data_set, self.output_buffer, self.config)
+            preprocessor.processor(i, activity_type=activity_type)
 
-    ax_mfcc = add_subplot_axes(ax, [0.0, 0.0, 1.0, 0.75])
-    ax_mfcc.set_xlim(-400, 400)
-    ax_zcr = add_subplot_axes(ax, [0.0, 0.85, 1.0, 0.05])
-    ax_zcr.set_xlim(0.0, 1.0)
+    def reconstructed_kinect_signals(self):
+        kinect_angles = []
+        for j in range(0, self.kinect_angle_length):
+            nomalize_signal = self.nomalize_signal(self.raw_kinect_angle_data.ix[:, j])
+            reconstructed_signal = SingularSpectrumAnalysis(nomalize_signal,
+                                                            int(self.config["window_size"])) \
+                .execute(int(self.config["number_of_principle_component"]))
+            max_value = reconstructed_signal.max(axis=0)
+            min_value = reconstructed_signal.min(axis=0)
+            mapping = interp1d([min_value, max_value], [0, 180])
+            kinect_angles.append(mapping(np.array(reconstructed_signal)))
+        with open(
+                                        project_path + "/build/dataset/train/result/reconstructed_" + activity_type + "_kinect__angles_.csv",
+                'w') as f:
+            np.savetxt(f, np.transpose(np.array(kinect_angles)), delimiter=',', fmt='%.18e')
 
-    plt.title('Feature distribution across frames of a single clip ({0} : {1})'.format(clip.category, clip.filename), y=1.5)
-    sb.boxplot(data=MFCC, orient='h', order=list(reversed(MFCC.columns)), ax=ax_mfcc)
-    sb.boxplot(data=ZCR, orient='h', ax=ax_zcr)
-    plt.show()
+    def append_channel_data(self):
+        for i in range(0, len(self.signal_types)):
+            signal_type = self.signal_types[i]
+            noise_signals = []
+            for i in range(0, self.channel_length):
+                processed_signal = pd.read_csv(str(self.config["train_dir_abs_location"]) + "/" + str(i) + "_" +
+                                               activity_type + "_" + signal_type + ".csv")
+                noise_signals.append(np.array(processed_signal.ix[:, 0]))
+            with open(str(self.config[
+                              "train_dir_abs_location"]) + "/result/" + activity_type + "_" + signal_type + "s" + ".csv",
+                      'w') as f:
+                np.savetxt(f, np.transpose(np.array(noise_signals)), delimiter=',', fmt='%.18e')
 
-def plot_single_feature_one_clip(feature, title, ax):
-    sb.despine()
-    ax.set_title(title, y=1.10)
-    sb.distplot(feature, bins=20, hist=True, rug=False,
-                hist_kws={"histtype": "stepfilled", "alpha": 0.5},
-                kde_kws={"shade": False},
-                color=sb.color_palette("muted", 4)[2], ax=ax)
+    def plot_signals(self, is_save=False, start=0, end=0, fsamp=1, is_raw=False, is_compare=False):
+        matplotlib.rc('xtick', labelsize=10)
+        matplotlib.rc('ytick', labelsize=10)
+        matplotlib.rc('axes', titlesize=15)
+        matplotlib.rc('legend', fontsize=15)
+        if is_raw:
+            raw_channels_data = pd.read_csv(self.dataset_location).ix[:, 2:7].dropna()
+        else:
+            raw_channels_data = pd.read_csv(self.config["train_dir_abs_location"]
+                                            + "/result/"+self.activity_type+"_feature_vectors.csv").dropna()
+        noise_reducer_signal_data = pd.read_csv(self.config["train_dir_abs_location"]
+                                        + "/result/"+self.activity_type+"_noise_reduced_signals.csv").dropna()
+        self.save_channels = PdfPages('channels_'+self.activity_type+'_reconstructed.pdf')
+        graph_legend = []
+        handle_as = []
+        labels_as = []
+        num_ch = len(self.channels_names)
+        fig = plt.figure(figsize=(10, 10))
+        fig.subplots_adjust(hspace=.5)
 
-def plot_single_feature_all_clips(feature, title, ax):
-    sb.despine()
-    ax.set_title(title, y=1.03)
-    sb.boxplot(feature, vert=False, orient='h', order=list(reversed(feature.columns)), ax=ax)
+        index = 1
+        num_types = 1
 
-def plot_single_feature_aggregate(feature, title, ax):
-    sb.despine()
-    ax.set_title(title, y=1.03)
-    sb.distplot(feature, bins=20, hist=True, rug=False,
-                hist_kws={"histtype": "stepfilled", "alpha": 0.5},
-                kde_kws={"shade": False},
-                color=sb.color_palette("muted", 4)[1], ax=ax)
+        if is_compare:
+            num_types = 2
+        for h in range(0, num_ch):
+            # preprocessor = PreProcessor(h, None, None, self.config)
+            ax = plt.subplot(num_ch*num_types, num_types, index)
+            if (end == 0):
+                end = raw_channels_data.ix[:, h].shape[0] - 1
+            x = np.arange(start, end, 1)
+            input_signal = raw_channels_data.ix[:, h][start * fsamp:end * fsamp]
+            noise_reduced_signal = noise_reducer_signal_data.ix[:, h][start * fsamp:end * fsamp]
 
-def generate_feature_summary(dataset, category, clip, coefficient):
-    title = "{0} : {1}".format(dataset[category][clip].category, dataset[category][clip].filename)
-    MFCC = pd.DataFrame()
-    aggregate = []
-    for i in range(0, len(dataset[category])):
-        MFCC[i] = dataset[category][i].feature_list["mfcc"].get_mfcc()[:, coefficient]
-        aggregate = np.concatenate([aggregate, dataset[category][i].feature_list["mfcc"].get_mfcc()[:, coefficient]])
+            l1 = ax.plot(noise_reduced_signal, linewidth=1.0, label="raw signal")
+            graph_legend.append(l1)
 
-    f = plt.figure(figsize=(14, 12))
-    f.subplots_adjust(hspace=0.6, wspace=0.3)
+            index+=1
+            if is_compare:
+                ax = plt.subplot(num_ch * num_types, num_types, index)
+                l2 = ax.plot(input_signal, linewidth=1.0, label="svd signal")
+                graph_legend.append(l2)
+                index += 1
 
-    ax1 = plt.subplot2grid((3, 3), (0, 0))
-    ax2 = plt.subplot2grid((3, 3), (1, 0))
-    ax3 = plt.subplot2grid((3, 3), (0, 1), rowspan=2)
-    ax4 = plt.subplot2grid((3, 3), (0, 2), rowspan=2)
+            # with open("input.csv", 'w') as f:
+            #     np.savetxt(f, input_signal, delimiter=',', fmt='%.18e')
 
-    ax1.set_xlim(0.0, 0.5)
-    ax2.set_xlim(-100, 250)
-    ax4.set_xlim(-100, 250)
+            # noise_reducer_signal = preprocessor.apply_noise_reducer_filer(input_signal)
+            # l2 = ax.plot(x, noise_reducer_signal, linewidth=3.0, label="noise_reducer_signal")
+            # graph_legend.append(l2)
 
-    plot_single_feature_one_clip(dataset[category][clip].feature_list["zcr"].get_zcr(), 'ZCR distribution across frames'
-                                                                                        '\n{0}'.format(title), ax1)
-    plot_single_feature_one_clip(dataset[category][clip].feature_list["mfcc"].get_mfcc()[:, coefficient],
-                                  'MFCC_{0} distribution across frames\n{1}'.format(coefficient, title), ax2)
-    plot_single_feature_all_clips(MFCC, 'Differences in MFCC_{0} distribution\nbetween clips of {1}'.format(coefficient
-                                                                            ,dataset[ category][ clip].category), ax3)
-    plot_single_feature_aggregate(aggregate,'Aggregate MFCC_{0} distribution\n(bag-of-frames across all clips\nof {1})'.
-                                  format(coefficient, dataset[category][clip].category), ax4)
-    plt.show()
+            # normalize_signal = preprocessor.nomalize_signal(noise_reducer_signal)
+            # l3 = ax.plot(x, normalize_signal, linewidth=1.0, label="normalize_signal")
+            # graph_legend.append(l3)
 
-def view_clip_overview(categories = 5, clips_shown = 1):
-    f, axes = plt.subplots(categories, clips_shown, figsize=(clips_shown * 2, categories * 2), sharex=True, sharey=True)
-    f.subplots_adjust(hspace=0.35)
+            # reconstructed_signal = SingularSpectrumAnalysis(noise_reducer_signal, self.config["window_size"], False).execute(1)
+            # l4 = ax.plot(x,reconstructed_signal, linewidth=1.0, label='reconstructed signal with SSA')
+            # graph_legend.append(l4)
 
-    for c in range(0, categories):
-        for i in range(0, clips_shown):
-            plot_clip_overview(clips_10[c][i], axes[c])
-    plt.show()
+            handles, labels = ax.get_legend_handles_labels()
+            handle_as.append(handles)
+            labels_as.append(labels)
+            plt.title(self.channels_names[h])
+            # leg = plt.legend(handles=handles, labels=labels)
+
+        fig.legend(handles=handle_as[0], labels=labels_as[0])
+        fig.text(0.5, 0.04, 'position', ha='center', fontsize=10)
+        fig.text(0.04, 0.5, 'angle(0-180)', va='center', rotation='vertical', fontsize=10)
+        fig.tight_layout()
+        if is_save:
+            self.save_channels.savefig(bbox_inches='tight')
+            self.save_channels.close()
+        else:
+
+            plt.show()
+
+    def plot_kinect_angles(self, is_save=False, start=0, end=0, fsamp=1, is_raw=False):
+        if is_raw==True:
+            kinect_angle_data = pd.read_csv(self.dataset_location).ix[:, 10:13].dropna()
+        else:
+            kinect_angle_data = pd.read_csv(self.config["train_dir_abs_location"]
+                                                + "/result/reconstructed_"+self.activity_type+"_kinect__angles_.csv").dropna()
+        graph_legend = []
+        handle_as = []
+        labels_as = []
+        self.save_kinect_anagle = PdfPages(''+self.activity_type+'_kinect_angles_reconstructed.pdf')
+        num_ch = 3
+
+        fig = plt.figure(figsize=(15, 10))
+        fig.subplots_adjust(hspace=.5)
+        for h in range(0, num_ch):
+            ax = plt.subplot(num_ch, 1, h + 1)
+            if (end == 0):
+                end = kinect_angle_data.ix[:, h].shape[0] - 1
+
+            input_signal = kinect_angle_data.ix[:, h][start * fsamp:end * fsamp]
+            x = np.arange(start, end, 1)
+            l1 = ax.plot(x, input_signal, linewidth=1.0, label="raw signal")
+            graph_legend.append(l1)
+
+            # nomalize_signal = self.nomalize_signal(input_signal)
+
+            # max_value = reconstructed_signal.max(axis=0)
+            # min_value = reconstructed_signal.min(axis=0)
+            # mapping = interp1d([min_value, max_value], [0, 180])
+            # reconstructed_signal= mapping(np.array(reconstructed_signal))
+
+            handles, labels = ax.get_legend_handles_labels()
+            handle_as.append(handles)
+            labels_as.append(labels)
+            plt.title(self.angle_names[h])
+            # leg = plt.legend(handles=handles, labels=labels)
+
+        fig.legend(handles=handle_as[0], labels=labels_as[0])
+        fig.text(0.5, 0.04, 'position', ha='center', fontsize=20)
+        fig.text(0.04, 0.5, 'angle(0-180)', va='center', rotation='vertical', fontsize=20)
+        if is_save:
+            self.save_kinect_anagle.savefig(bbox_inches='tight')
+            self.save_kinect_anagle.close()
+        else:
+            plt.show()
+
+    def apply_dwt(self, nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, pattern_type):
+        if(is_apply_dwt):
+            pattern = np.array(nomalized_signal.ix[:, 1][pattern_start_at:pattern_end_at])
+            result = []
+            possion = []
+            final_result = []
+            size = pattern_end_at - pattern_start_at
+            counter = start
+            # for i in range(0, int(np.floor((end-start)/5))):
+            for i in range(0, 3):
+                y = np.array(nomalized_signal.ix[:, 1][counter:counter + size]).tolist()
+                possion.append(counter)
+                counter += 5
+                dist, cost, acc, path = dtw(pattern, y, manhattan_distances)
+                print (dist)
+                result.append(dist)
+            final_result.append(result)
+            final_result.append(possion)
+
+            with open(self.config["train_dir_abs_location"] + "/result/"+pattern_type+"_"+self.activity_type+"_dwt_result.csv", 'w') as f:
+                np.savetxt(f, np.transpose(np.array(final_result)), delimiter=',', fmt='%.18e')
+            return result, possion
+        else:
+            dwt_result = pd.read_csv(self.config["train_dir_abs_location"]
+                                            + "/result/"+pattern_type+"_"+self.activity_type+"_dwt_result.csv").dropna()
+            return dwt_result.ix[:,0], dwt_result.ix[:,1]
+
+    def plot_kinect_angles_with_activity_signals(self, start=0, end=0, fsamp=1, is_raw=False):
+        if is_raw:
+            channels_data = self.nomalize_signal(pd.read_csv(self.dataset_location).ix[:, 2:7].dropna())
+            kinect_angle_data = pd.read_csv(self.dataset_location).ix[:, 10:13].dropna()
+        else:
+            channels_data = pd.read_csv(self.config["train_dir_abs_location"]
+                                            + "/result/"+self.activity_type+"_feature_vectors.csv").dropna()
+            kinect_angle_data = pd.read_csv(self.config["train_dir_abs_location"]
+                                            + "/result/reconstructed_"+self.activity_type+"_kinect__angles_.csv").dropna()
+
+        graph_legend = []
+        handle_as = []
+        labels_as = []
+
+        fig = plt.figure(figsize=(15, 10))
+        fig.subplots_adjust(hspace=.5)
+        if end==0:
+            end= kinect_angle_data.ix[:, 0].shape[0] - 1
+
+        x = np.arange(start, end, 1)
+        for i in range(0, 5):
+            ax = plt.subplot(810 + i + 1)
+            l1 = ax.plot(channels_data.ix[:, i][start:end], linewidth=1.0, label="Processed signal with SSA")
+            graph_legend.append(l1)
+            handles, labels = ax.get_legend_handles_labels()
+            handle_as.append(handles)
+            labels_as.append(labels)
+            plt.title(self.channels_names[i])
 
 
+        for j in range(0, 3):
+            ax = plt.subplot(815 + 1 + j)
+            l1 = ax.plot(x, kinect_angle_data.ix[:, j][start:end], linewidth=1.0, label="Processed signal with SSA")
+            graph_legend.append(l1)
+            handles, labels = ax.get_legend_handles_labels()
+            handle_as.append(handles)
+            labels_as.append(labels)
+            plt.title(self.channels_names[j])
 
+        fig.legend(handles=handle_as[0], labels=labels_as[0])
+        fig.text(0.5, 0.04, 'position', ha='center', fontsize=10)
+        fig.text(0.04, 0.5, 'angle(0-180)', va='center', rotation='vertical', fontsize=10)
+        plt.show()
 
-loader = DataLoader('/home/runge/projects/sound_detector/TRAIN-10', "audio_clips_segmentation.tfrecords", 512, 1,1, 2)
-clips_10 = loader.load_dataset_from_ogg('/home/runge/projects/sound_detector/TRAIN-10')
+    def plot_detected_pattern(self, start=0, end=0, fsamp=1, is_raw=False, pattern_start_at=0, pattern_end_at=200, is_apply_dwt=False):
+        if is_raw:
+            channels_data = pd.read_csv(self.dataset_location).ix[:, 2:7].dropna()
+            kinect_angle_data = pd.read_csv(self.dataset_location).ix[:, 10:13].dropna()
+        else:
+            channels_data = pd.read_csv(self.config["train_dir_abs_location"]
+                                            + "/result/"+self.activity_type+"_feature_vectors.csv.csv").dropna()
+            kinect_angle_data = pd.read_csv(self.config["train_dir_abs_location"]
+                                            + "/result/reconstructed_"+self.activity_type+"_kinect__angles_.csv").dropna()
 
-# plot_single_clip(clips_10[1][0])
-# generate_feature_summary(clips_10, 1, 0, 1)
-#view_clip_overview(10,1)
-save_clip_overview(10, 1)
+        nomalized_signal = self.nomalize_signal(kinect_angle_data)
+        # mapping = interp1d([-1,1],[0,180])
+        distance, possion = self.apply_dwt(nomalized_signal, start, end, pattern_start_at, pattern_end_at, is_apply_dwt, pattern_type)
+
+        if end==0:
+            end = nomalized_signal.shape[0] - 1
+
+        _, mintab = self.lowest_point_detect(distance, .3)
+        indices = possion[np.array(mintab[:, 0], dtype=int)]
+
+        graph_legend = []
+        handle_as = []
+        labels_as = []
+
+        fig = plt.figure(figsize=(15, 10))
+        fig.subplots_adjust(hspace=.5)
+        x = np.arange(start, end, 1)
+        for i in range(0, 5):
+            ax = plt.subplot(810 + i + 1)
+            l1 = ax.plot(x, self.nomalize_signal(channels_data.ix[:, i][start:end]), linewidth=1.0,
+                         label="Processed signal with SSA")
+            graph_legend.append(l1)
+            handles, labels = ax.get_legend_handles_labels()
+            handle_as.append(handles)
+            labels_as.append(labels)
+            plt.title(self.channels_names[i])
+            for i in indices:
+                plt.plot([i, i], [2,1], '-r')
+
+        for j in range(0, 3):
+            ax = plt.subplot(815 + 1 + j)
+            l1 = ax.plot(x, self.nomalize_signal(kinect_angle_data.ix[:, j][start:end]), linewidth=1.0,
+                         label="Processed signal with SSA")
+            graph_legend.append(l1)
+            handles, labels = ax.get_legend_handles_labels()
+            handle_as.append(handles)
+            labels_as.append(labels)
+            plt.title(self.channels_names[j])
+            for i in indices:
+                plt.plot([i, i], [2,1], '-r')
+
+        fig.legend(handles=handle_as[0], labels=labels_as[0])
+        fig.text(0.5, 0.04, 'position', ha='center', fontsize=10)
+        fig.text(0.04, 0.5, 'angle(0-180)', va='center', rotation='vertical', fontsize=10)
+        plt.show()
+
+    def lowest_point_detect(self, v, delta, x=None):
+        maxtab = []
+        mintab = []
+        if x is None:
+            x = np.arange(len(v))
+        v = np.asarray(v)
+        if len(v) != len(x):
+            sys.exit('Input vectors v and x must have same length')
+        if not np.isscalar(delta):
+            sys.exit('Input argument delta must be a scalar')
+        if delta <= 0:
+            sys.exit('Input argument delta must be positive')
+        mn, mx = np.Inf, -np.Inf
+        mnpos, mxpos = np.NaN, np.NaN
+        lookformax = True
+        for i in np.arange(len(v)):
+            this = v[i]
+            if this > mx:
+                mx = this
+                mxpos = x[i]
+            if this < mn:
+                mn = this
+                mnpos = x[i]
+            if lookformax:
+                if this < mx - delta:
+                    maxtab.append((mxpos, mx))
+                    mn = this
+                    mnpos = x[i]
+                    lookformax = False
+            else:
+                if this > mn + delta:
+                    mintab.append((mnpos, mn))
+                    mx = this
+                    mxpos = x[i]
+                    lookformax = True
+        return np.array(maxtab), np.array(mintab)
+
+    def execute(self, is_init=False):
+        start = 1000
+        end = 0
+        if is_init:
+            self.reconstructed_channel_data()
+            self.reconstructed_kinect_signals()
+            self.append_channel_data()
+        # self.plot_kinect_angles(start=start, end=end, is_raw=False)
+        # self.plot_signals(start=start, end=end, is_raw=True)
+        # self.plot_detected_pattern(pattern_start_at=4400, pattern_end_at=5000, start=4000, end=5000, is_apply_dwt=True)
+        self.plot_kinect_angles_with_activity_signals(start, end, is_raw=False)
+
+project_path = "/home/runge/openbci/git/OpenBCI_Python"
+dataset_location = "/home/runge/openbci/git/OpenBCI_Python/build/dataset2017-5-6_0-0-33new_up.csv"
+activity_type = "straight_up"
+
+signal_analyzer = SignalAnalyzer(activity_type, project_path, dataset_location)
+signal_analyzer.execute()
