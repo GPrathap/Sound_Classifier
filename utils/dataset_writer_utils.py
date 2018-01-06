@@ -1,13 +1,16 @@
 import matplotlib
+
+from utils.data_types import _bytes_feature
+from utils.data_types_utils import _int64_feature
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.interactive(False)
-import Image
 import numpy as np
 import tensorflow as tf
 import librosa.display
 
-from data_types_utils import _int64_feature, _bytes_feature
+
 
 
 def read_tf_recode(config):
@@ -39,20 +42,20 @@ def create_sample_from_data(clip, clip_label):
 
 def create_sample_from_image(clip_filename, clip_label, config):
     image_width = int(config["processing"]["train"]["generated_image_width"])
-    image_height = int(config["processing"]["train"]["generated_image_height"])
-    image = Image.open(clip_filename)
-    image = image.resize((image_width, image_height),Image.ANTIALIAS)
-    image = np.asarray(image)
-    image = image.flatten()
-    # np.reshape(image, (-1, image.shape[1] * image.shape[0]))
-    feature_vector = image.tostring()
-    clip_label = clip_label.tostring()
-    clip_raw = tf.train.Example(features=tf.train.Features(feature={
-        'clip_height': _int64_feature(image.shape[0]),
-        'clip_width': _int64_feature(image.shape[0]),
-        'clip_raw': _bytes_feature(feature_vector),
-        'clip_label_raw': _bytes_feature(clip_label)}))
-    return clip_raw
+    # image_height = int(config["processing"]["train"]["generated_image_height"])
+    # image = Image.open(clip_filename)
+    # image = image.resize((image_width, image_height),Image.ANTIALIAS)
+    # image = np.asarray(image)
+    # image = image.flatten()
+    # # np.reshape(image, (-1, image.shape[1] * image.shape[0]))
+    # feature_vector = image.tostring()
+    # clip_label = clip_label.tostring()
+    # clip_raw = tf.train.Example(features=tf.train.Features(feature={
+    #     'clip_height': _int64_feature(image.shape[0]),
+    #     'clip_width': _int64_feature(image.shape[0]),
+    #     'clip_raw': _bytes_feature(feature_vector),
+    #     'clip_label_raw': _bytes_feature(clip_label)}))
+    # return clip_raw
 
 
 def draw_sample_plot_and_save(clip, clip_type, index, config):

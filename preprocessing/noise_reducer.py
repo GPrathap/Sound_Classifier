@@ -3,16 +3,17 @@ import threading
 
 import numpy as np
 
-import init_buffer as buf
-from preprocessing import PreProcessor
+import preprocessing.init_buffer as buf
+
 # import draw_sample_plot_and_save, create_sample_from_image
 # import get_label
+from preprocessing.preprocessing import PreProcessor
 from utils.dataset_writer_utils import draw_sample_plot_and_save, create_sample_from_image
 from utils.utils import get_label
 
 
 class NoiseReducer(threading.Thread):
-    def __init__(self, thread_id, server, writer, config):
+    def __init__(self, thread_id, config):
         threading.Thread.__init__(self)
         self.config = config
         self.window_size = int(config["window_size"])
@@ -28,8 +29,8 @@ class NoiseReducer(threading.Thread):
         self.thread_id = thread_id
         self.output_buffer = []
         self.is_processing = False
-        self.server = server
-        self.writer = writer
+        # self.server = server
+        # self.writer = writer
         self.number_of_class = int(config["processing"]["train"]["number_of_class"])
         self.ip = str(config["ip"])
         self.port = int(config["port"]) + 5  # adding five offset to secondary udp server
@@ -71,22 +72,23 @@ class NoiseReducer(threading.Thread):
         for t in threads:
             t.join()
         # with open(self.train_dir + "/feature_vectors.csv", 'a') as f:
-        #         np.savetxt(f, self.output_buffer, delimiter=',', fmt='%.18e')
+        #         np.savetxt(f, self.output_buffer, delimiter=',')
 
-        clip_label = get_label(1, self.number_of_class)
-        clip_filename = draw_sample_plot_and_save(self.output_buffer.flatten(), "/channel", self.thread_id, self.config)
-        sample = create_sample_from_image(clip_filename, clip_label, self.config)
+        # clip_label = get_label(1, self.number_of_class)
+        # clip_filename = draw_sample_plot_and_save(self.output_buffer.flatten(), "/channel", self.thread_id, self.config)
+        # sample = create_sample_from_image(clip_filename, clip_label, self.config)
         # sample = create_sample_from_data(self.output_buffer.flatten(), class_label)
-        self.writer.write(sample.SerializeToString())
-        self.send_noise_data(json.dumps(self.input_buffer.tolist()))
-        self.send_preprocessed_data(json.dumps(self.output_buffer.tolist()))
+        # self.writer.write(sample.SerializeToString())
+        # self.send_noise_data(json.dumps(self.input_buffer.tolist()))
+        # self.send_preprocessed_data(json.dumps(self.output_buffer.tolist()))
         # return self.output_buffer
+        # TODO how this is to be done.
 
-    def send_preprocessed_data(self, data):
-        self.server.sendto(data, (self.ip, self.port))
+    # def send_preprocessed_data(self, data):
+        # self.server.sendto(data, (self.ip, self.port))
 
-    def send_noise_data(self, data):
-        self.server.sendto(data, (self.ip, self.port+1))
+    # def send_noise_data(self, data):
+        # self.server.sendto(data, (self.ip, self.port+1))
 
 # project_file_path = "/home/runge/openbci/OpenBCI_Python"
 # config_file = "/home/runge/openbci/OpenBCI_Python/config/config.json"
@@ -116,4 +118,3 @@ class NoiseReducer(threading.Thread):
 #             writer.close()
 
 
-2332111112313233212232323322223132332212323213223231323322233232331232323233122232321321233132332121

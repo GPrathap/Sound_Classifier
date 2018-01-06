@@ -1,18 +1,13 @@
 from __future__ import print_function
-import Queue
-import json
-import socket
-import sys
+
 import threading
-import tensorflow as tf
-import pandas as pd
+
 from scipy.signal import butter, filtfilt
 
 import librosa
 import numpy as np
 
-from processor import Clip
-from ssa import SingularSpectrumAnalysis
+
 
 
 class PreProcessor(threading.Thread):
@@ -49,29 +44,31 @@ class PreProcessor(threading.Thread):
         else:
             train_dir = self.train_dir + "/" + str(thread_id) + "_"
 
-        with open(train_dir + "noise_signal.csv", 'a') as f:
-            np.savetxt(f, noise_signal, delimiter=',', fmt='%.18e')
-        noise_reduced_signal = self.apply_noise_reducer_filer(noise_signal)
+        # with open(, 'w') as f:
+        result = np.array(noise_signal)
+        # np.savetxt(train_dir + "noise_signal.csv", result, delimiter=',')
+        # noise_reduced_signal = self.apply_noise_reducer_filer(noise_signal)
 
         # noise_reduced_signal = self.nomalize_signal(noise_reduced_signal)
-        with open(train_dir + "noise_reduced_signal.csv", 'a') as f:
-            np.savetxt(f, noise_reduced_signal, delimiter=',', fmt='%.18e')
+        with open(train_dir + "noise_signal.csv", 'ab') as f:
+            np.savetxt(f, result, delimiter=',', fmt='%.18e')
+            f.close()
 
         # reconstructed_signal = SingularSpectrumAnalysis(noise_reduced_signal, self.window_size).execute()
         # with open(train_dir + "reconstructed_signal.csv", 'a') as f:
         #     np.savetxt(f, reconstructed_signal, delimiter=',', fmt='%.18e')
         # todo uncomment when you running the main process
-        processed_signal = []
-        position = 0
-        for i in range(0, int((noise_reduced_signal.shape[0]) - int(self.config['window_size']) - 1)):
-            clip = Clip(self.config, buffer=np.array(noise_reduced_signal[position:position + int(self.config['window_size'])].tolist()))
-            processed_signal.append(clip.get_feature_vector())
-            position += 1
-        with open(train_dir + "feature_vector.csv", 'a') as f:
-             np.savetxt(f, np.array(processed_signal), delimiter=',', fmt='%.18e')
-            # self.lock.acquire()
-            # self.output_buffer[thread_id] = reconstructed_signal
-            # self.lock.release()
+        # processed_signal = []
+        # position = 0
+        # for i in range(0, int((noise_reduced_signal.shape[0]) - int(self.config['window_size']) - 1)):
+        #     clip = Clip(self.config, buffer=np.array(noise_reduced_signal[position:position + int(self.config['window_size'])].tolist()))
+        #     processed_signal.append(clip.get_feature_vector())
+        #     position += 1
+        # with open(train_dir + "feature_vector.csv", 'a') as f:
+        #      np.savetxt(f, np.array(processed_signal), delimiter=',', fmt='%.18e')
+        #     # self.lock.acquire()
+        #     # self.output_buffer[thread_id] = reconstructed_signal
+        #     # self.lock.release()
 
     def apply_noise_reducer_filer(self, data):
         data = np.array(data, dtype=float)

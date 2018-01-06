@@ -1,13 +1,12 @@
-import Queue
+
 import json
 import socket
 import sys
 import threading
-import init_buffer as buf
+import preprocessing.init_buffer as buf
 
 import numpy as np
 
-from RingBuffer import RingBuffer
 
 
 class UDPServer(threading.Thread):

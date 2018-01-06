@@ -1,3 +1,3 @@
 ring_buffers = []
-max_iteration = 10
+max_iteration = 1000
 channel_data = ""
